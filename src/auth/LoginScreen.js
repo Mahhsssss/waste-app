@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,12 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import '../global.css';
 import globalStyles, { colors } from '../globalStyles';
 import GoogleIcon from '../components/GoogleIcon';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../services/supabase'; 
 
 export default function LoginScreen({ onNavigate }) {
   const { signIn, signInWithGoogle } = useAuth();
@@ -27,29 +29,72 @@ export default function LoginScreen({ onNavigate }) {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // Email format check for validation checkmark
+  // 1. Listen for Supabase session changes & automatic redirect to Home
+  useEffect(() => {
+    // Check if user is already logged in on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user && onNavigate) {
+        onNavigate('HomeScreen');
+      }
+    });
+
+    // Listen for auth state changes (triggers right after Google OAuth completes)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user && onNavigate) {
+        onNavigate('HomeScreen');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [onNavigate]);
+
+  // 2. Handle incoming deep link URLs when redirected back from Google browser
+  useEffect(() => {
+    const handleDeepLink = async (event) => {
+      if (event?.url) {
+        await supabase.auth.exchangeCodeForSession(event.url);
+      }
+    };
+
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    Linking.getInitialURL().then((url) => {
+      if (url) supabase.auth.exchangeCodeForSession(url);
+    });
+
+    return () => subscription.remove();
+  }, []);
+
   const isEmailValid = email.includes('@') && email.includes('.');
 
   const handleLogin = async () => {
-    if (!email.trim() || !password) {
-      Alert.alert('Required Fields', 'Please enter both your email and password.');
-      return;
-    }
+  if (!email.trim() || !password) {
+    Alert.alert('Required Fields', 'Please enter both your email and password.');
+    return;
+  }
 
-    try {
-      setLoading(true);
-      const { data, error } = await signIn(email, password);
-      if (error) {
-        Alert.alert('Login Failed', error);
-      } else {
-        Alert.alert('Welcome Back!', 'You have logged in successfully.');
-      }
-    } catch (err) {
-      Alert.alert('Error', err.message || 'Something went wrong');
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    const { data, error } = await signIn(email, password);
+
+    if (error) {
+      Alert.alert('Login Failed', typeof error === 'string' ? error : error.message || 'Invalid credentials.');
+    } else {
+      Alert.alert('Welcome Back!', 'You have logged in successfully.', [
+        {
+          text: 'OK',
+          onPress: () => {
+            if (onNavigate) onNavigate('HomeScreen');
+          },
+        },
+      ]);
     }
-  };
+  } catch (err) {
+    Alert.alert('Error', err.message || 'Something went wrong');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleGoogleSignIn = async () => {
     try {
@@ -175,7 +220,7 @@ export default function LoginScreen({ onNavigate }) {
             <TouchableOpacity
               style={[
                 globalStyles.primaryButton,
-                loading && { opacity: 0.8 },
+                loading && { opacity: 0.8 }
               ]}
               disabled={loading}
               activeOpacity={0.85}
@@ -186,7 +231,7 @@ export default function LoginScreen({ onNavigate }) {
               ) : (
                 <Text style={globalStyles.primaryButtonText}>Log in</Text>
               )}
-            </TouchableOpacity>
+          </TouchableOpacity>
 
             {/* Divider */}
             <View style={globalStyles.dividerContainer}>
@@ -195,7 +240,7 @@ export default function LoginScreen({ onNavigate }) {
               <View style={globalStyles.dividerLine} />
             </View>
 
-            {/* Social Options (Only Google, Apple/Facebook removed) */}
+            {/* Social Options */}
             <TouchableOpacity
               style={globalStyles.socialButtonCard}
               disabled={googleLoading}

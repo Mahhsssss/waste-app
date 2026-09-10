@@ -430,6 +430,121 @@ export const globalStyles = StyleSheet.create({
     marginBottom: spacing.xl,
     maxWidth: 260,
   },
+  // Add inside globalStyles = StyleSheet.create({ ... }) in globalStyles.js
+
+// --- HOME SCREEN STYLES ---
+logoTitle: {
+  fontSize: 28,
+  fontWeight: '800',
+  color: colors.primary, // #2E7D32
+  letterSpacing: -0.5,
+},
+logoSub: {
+  color: colors.primary400, // #66BB6A
+},
+sectionHeader: {
+  fontSize: 26,
+  fontWeight: '700',
+  color: colors.textPrimary,
+  marginVertical: spacing.md,
+},
+searchBar: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: colors.cardBg,
+  borderRadius: radius.xl,
+  paddingHorizontal: spacing.base,
+  height: 52,
+  marginBottom: spacing.lg,
+  borderWidth: 1,
+  borderColor: colors.border,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.05,
+  shadowRadius: 3,
+  elevation: 2,
+},
+scanCard: {
+  backgroundColor: colors.primary50,
+  borderRadius: radius.xl,
+  paddingVertical: 35,
+  paddingHorizontal: spacing.lg,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+scanButton: {
+  backgroundColor: colors.primary600,
+  paddingVertical: spacing.base,
+  paddingHorizontal: spacing.lg,
+  borderRadius: radius.lg,
+  width: '100%',
+  alignItems: 'center',
+},
+scanButtonText: {
+  color: colors.white,
+  fontWeight: '700',
+  fontSize: 17,
+},
+drawerHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: spacing.lg,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+},
+drawerTitle: {
+  fontSize: 22,
+  fontWeight: '700',
+  color: colors.primary600,
+  marginLeft: spacing.md,
+},
+menuRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  paddingVertical: spacing.base,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+},
+menuLabel: {
+  fontSize: 16,
+  fontWeight: '500',
+  color: colors.textSecondary,
+  marginLeft: spacing.base,
+},
+
+// --- SCAN SCREEN STYLES ---
+cameraContainer: {
+  flex: 1,
+  backgroundColor: colors.black,
+},
+permissionContainer: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: spacing.lg,
+  backgroundColor: colors.background,
+},
+permissionText: {
+  ...typography.bodyLarge,
+  textAlign: 'center',
+  marginBottom: spacing.lg,
+},
+captureButton: {
+  width: 75,
+  height: 75,
+  borderRadius: radius.full,
+  borderWidth: 4,
+  borderColor: colors.white,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+innerCaptureCircle: {
+  width: 60,
+  height: 60,
+  borderRadius: radius.full,
+  backgroundColor: colors.primary600,
+},
 });
 
 export default globalStyles;

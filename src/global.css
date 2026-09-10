@@ -66,3 +66,56 @@
   border-radius: var(--radius-full);
   height: 54px;
 }
+/* Add inside global.css */
+
+/* Component Specific Tokens */
+:root {
+  --camera-bg: #000000;
+  --scan-card-bg: var(--primary-50);
+}
+
+/* Home Screen Utilities */
+.logo-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--primary-600);
+  letter-spacing: -0.5px;
+}
+
+.search-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background-color: var(--card-bg);
+  border-radius: var(--radius-xl);
+  padding: 0 var(--spacing-base);
+  height: 52px;
+  border: 1px solid var(--border-divider);
+}
+
+.scan-card {
+  background-color: var(--scan-card-bg);
+  border-radius: var(--radius-xl);
+  padding: 35px var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Scan Screen Utilities */
+.capture-btn {
+  width: 75px;
+  height: 75px;
+  border-radius: var(--radius-full);
+  border: 4px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inner-capture-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-full);
+  background-color: var(--primary-600);
+}

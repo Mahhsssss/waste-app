@@ -6,19 +6,12 @@ import LoginScreen from './LoginScreen';
 import ForgotPasswordScreen from './ForgotPasswordScreen';
 import ResetPasswordScreen from './ResetPasswordScreen';
 import PasswordChangedScreen from './PasswordChangedScreen';
-
-export {
-  WelcomeScreen,
-  SignUpScreen,
-  LoginScreen,
-  ForgotPasswordScreen,
-  ResetPasswordScreen,
-  PasswordChangedScreen,
-};
+import HomeScreen from '../screens/HomeScreen';
 
 export default function AuthNavigator({ initialScreen = 'Welcome' }) {
   const [currentScreen, setCurrentScreen] = useState(initialScreen);
 
+  // FIX: Make sure setCurrentScreen is executed inside handleNavigate
   const handleNavigate = (screenName) => {
     setCurrentScreen(screenName);
   };
@@ -26,7 +19,7 @@ export default function AuthNavigator({ initialScreen = 'Welcome' }) {
   switch (currentScreen) {
     case 'Welcome':
       return <WelcomeScreen onNavigate={handleNavigate} />;
-    case 'SignUp':
+    case 'Signup':
       return <SignUpScreen onNavigate={handleNavigate} />;
     case 'Login':
       return <LoginScreen onNavigate={handleNavigate} />;
@@ -36,6 +29,9 @@ export default function AuthNavigator({ initialScreen = 'Welcome' }) {
       return <ResetPasswordScreen onNavigate={handleNavigate} />;
     case 'PasswordChanged':
       return <PasswordChangedScreen onNavigate={handleNavigate} />;
+    case 'Home':
+    case 'HomeScreen':
+      return <HomeScreen onNavigate={handleNavigate} />;
     default:
       return <WelcomeScreen onNavigate={handleNavigate} />;
   }
