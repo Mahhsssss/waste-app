@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import globalStyles, { colors } from '../globalStyles';
 
+const API_URL = "https://mahhsssss--waste-detection-detect.modal.run";
+
 export default function ScanScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraRef, setCameraRef] = useState(null);
@@ -21,7 +23,7 @@ export default function ScanScreen({ navigation }) {
           We need your permission to show the camera
         </Text>
         <TouchableOpacity 
-          style={globalStyles.primaryButton} 
+          style={globalStyles.primaryButton}
           onPress={requestPermission}
         >
           <Text style={globalStyles.primaryButtonText}>Grant Permission</Text>
@@ -32,51 +34,67 @@ export default function ScanScreen({ navigation }) {
 
   // Handle Photo Capture Action
   const takePicture = async () => {
-    if (cameraRef) {
-      try {
-        const photo = await cameraRef.takePictureAsync();
-        Alert.alert("Success", `Photo captured: ${photo.uri}`);
-        // Backend logic: Pass photo.uri to your scrap recognition API here
-      } catch (error) {
-        Alert.alert("Error", "Could not capture image.");
-      }
+    if (!cameraRef.current || loading) return;
+
+    setLoading(true);
+    setDetection(null);
+
+    try {
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+
+      const formData = new FormData();
+      formData.append('file', {
+        uri: photo.uri,
+        type: 'image/jpeg',
+        name: 'trash.jpg',
+      });
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Server Request Failed');
+      
+      const result = await response.json();
+      setDetection(result);
+    } catch (e) {
+      console.error(e);
+      setDetection({ class: "Connection Error", confidence: 0 });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <View style={globalStyles.cameraContainer}>
-      <CameraView style={{ flex: 1 }} ref={(ref) => setCameraRef(ref)}>
-        {/* Overlay Back Button */}
-        <TouchableOpacity 
-          style={{
-            position: 'absolute',
-            top: 50,
-            left: 20,
-            zIndex: 10,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            padding: 8,
-            borderRadius: 20,
-          }} 
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={28} color={colors.white} />
-        </TouchableOpacity>
+    <View style={styles.container}>
+      <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing="back">
+        {detection && (
+          <View style={styles.resultBox}>
+            <Text style={styles.label}>
+              {detection.class !== "Connection Error" && detection.class !== "nothing" ? "🗑️ " : "⚠️ "}
+              {detection.class.toUpperCase()}
+            </Text>
+            {detection.confidence > 0 && (
+              <Text style={styles.conf}>
+                {(detection.confidence * 100).toFixed(1)}% Confidence
+              </Text>
+            )}
+          </View>
+        )}
 
-        {/* Shutter Button Container */}
-        <View 
-          style={{
-            position: 'absolute',
-            bottom: 100,
-            alignSelf: 'center',
-          }}
-        >
-          <TouchableOpacity 
-            style={globalStyles.captureButton} 
-            onPress={takePicture}
-            activeOpacity={0.8}
+        <View style={styles.footer}>
+          <Pressable 
+            style={[styles.scanButton, loading && styles.disabledButton]} 
+            onPress={scanTrash}
+            disabled={loading}
           >
-            <View style={globalStyles.innerCaptureCircle} />
-          </TouchableOpacity>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.scanText}>Classify Waste</Text>
+            )}
+          </Pressable>
         </View>
       </CameraView>
     </View>

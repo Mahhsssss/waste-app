@@ -1,9 +1,19 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import './src/global.css';
+import { StyleSheet, View, Text } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import AuthNavigator from './src/auth';
+import SplashScreen from './src/screens/SplashScreen'; // Imported your new screen
+
+// Main Screens
 import HomeScreen from './src/screens/HomeScreen';
 //import LocationScreen from './src/screens/LocationScreen';
 import ScanScreen from './src/screens/ScanScreen';
@@ -59,6 +69,36 @@ export default function App() {
         <Tab.Screen name="NgoTab" component={NgoScreen} />
       </Tab.Navigator>
     </NavigationContainer>
+  );
+}
+
+function RootNavigator() {
+  const { session, loading } = useAuth();
+
+  // Fixed session syntax check
+  if (session?.user) {
+    return <MainAppTabs />;
+  }
+
+  return <AuthNavigator initialScreen="Welcome" />;
+}
+
+export default function App() {
+  const [isShowSplash, setIsShowSplash] = useState(true);
+
+  // Render splash screen first
+  if (isShowSplash) {
+    return <SplashScreen onFinish={() => setIsShowSplash(false)} />;
+  }
+
+  // Render main app once splash finishes
+  return (
+    <SafeAreaProvider>
+      <AuthProvider>
+        <StatusBar style="dark" />
+        <RootNavigator />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 
