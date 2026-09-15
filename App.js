@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './src/global.css';
 import { StyleSheet, View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import AuthNavigator from './src/auth';
+import SplashScreen from './src/screens/SplashScreen'; // Imported your new screen
 
 // Main Screens
 import HomeScreen from './src/screens/HomeScreen';
@@ -78,7 +79,7 @@ function MainAppTabs() {
 function RootNavigator() {
   const { session, loading } = useAuth();
 
-  // If user is authenticated, show Main App Tabs; otherwise show Auth Flow
+  // Fixed session syntax check
   if (session?.user) {
     return <MainAppTabs />;
   }
@@ -87,6 +88,14 @@ function RootNavigator() {
 }
 
 export default function App() {
+  const [isShowSplash, setIsShowSplash] = useState(true);
+
+  // Render splash screen first
+  if (isShowSplash) {
+    return <SplashScreen onFinish={() => setIsShowSplash(false)} />;
+  }
+
+  // Render main app once splash finishes
   return (
     <SafeAreaProvider>
       <AuthProvider>
