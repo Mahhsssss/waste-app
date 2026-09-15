@@ -21,7 +21,12 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.anonymous.wasteapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -29,7 +34,13 @@
     "plugins": [
       "expo-secure-store",
       "expo-web-browser",
-      "expo-camera"
-    ]
+      "expo-camera",
+      "expo-status-bar"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4a4f2b71-79b1-4c4b-9f7a-145f951f77e2"
+      }
+    }
   }
 }
