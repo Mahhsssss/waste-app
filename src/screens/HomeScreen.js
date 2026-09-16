@@ -84,10 +84,17 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  const handleSearchSubmit = () => {
+    if (searchQuery.trim()) {
+      const cleanedQuery = searchQuery.replace(/;/g, '').trim();
+      setSearchQuery(cleanedQuery);
+    }
+  };
+
   const filteredBlogs = blogs.filter((item) => {
     const matchesCategory =
       selectedFilter === 'All' || item.category === selectedFilter;
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase().replace(/;/g, '').trim();
     const matchesSearch =
       !query ||
       item.title?.toLowerCase().includes(query) ||
@@ -115,7 +122,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.brandTitle}>
                 Eco<Text style={styles.brandSub}>Shift</Text>
               </Text>
-              <Text style={styles.locationMeta}>GLOBAL RECYCLING FEED</Text>
+              <Text style={styles.locationMeta}>HAZARD & IMPACT DISPATCHES</Text>
             </View>
 
             <TouchableOpacity style={styles.reloadBtn} onPress={loadBlogs}>
@@ -123,10 +130,12 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
+          {/* Scrollable Content Area */}
           <ScrollView
+            style={styles.scrollViewStyle}
             contentContainerStyle={[
               styles.scrollContentContainer,
-              { paddingBottom: Math.max(insets.bottom + 90, 120) },
+              { paddingBottom: 130 }, // Ensures last items scroll smoothly above the floating pill
             ]}
             showsVerticalScrollIndicator={false}
           >
@@ -142,9 +151,14 @@ export default function HomeScreen({ navigation }) {
                 placeholder="Search plastics, e-waste, hazardous scrap..."
                 placeholderTextColor={colors.placeholder}
                 value={searchQuery}
-                onChangeText={setSearchQuery}
+                onChangeText={(text) => setSearchQuery(text.replace(/;/g, ''))}
+                onSubmitEditing={handleSearchSubmit}
                 style={styles.searchInput}
+                returnKeyType="search"
               />
+              <TouchableOpacity onPress={handleSearchSubmit} style={styles.searchSubmitBtn}>
+                <Ionicons name="arrow-forward-circle" size={22} color={colors.primary600} />
+              </TouchableOpacity>
             </View>
 
             {/* Dynamic Story Avatars */}
@@ -154,42 +168,46 @@ export default function HomeScreen({ navigation }) {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.storiesScrollContent}
               >
-                {categories.map((cat, idx) => (
-                  <ScalePressable
-                    key={idx}
-                    style={styles.storyAvatarItem}
-                    onPress={() => setSelectedFilter(cat.label)}
-                    scaleTo={0.92}
-                  >
-                    <View
-                      style={[
-                        styles.storyRing,
-                        selectedFilter === cat.label && styles.storyRingActive,
-                      ]}
+                {categories.map((cat, idx) => {
+                  const cleanLabel = cat.label.replace(/;/g, '');
+                  const isSelected = selectedFilter === cleanLabel;
+                  return (
+                    <ScalePressable
+                      key={idx}
+                      style={styles.storyAvatarItem}
+                      onPress={() => setSelectedFilter(cleanLabel)}
+                      scaleTo={0.92}
                     >
-                      <View style={styles.storyInnerCircle}>
-                        <Ionicons
-                          name={cat.icon}
-                          size={20}
-                          color={
-                            selectedFilter === cat.label
-                              ? colors.white
-                              : colors.primary800
-                          }
-                        />
+                      <View
+                        style={[
+                          styles.storyRing,
+                          isSelected && styles.storyRingActive,
+                        ]}
+                      >
+                        <View style={styles.storyInnerCircle}>
+                          <Ionicons
+                            name={cat.icon}
+                            size={20}
+                            color={
+                              isSelected
+                                ? colors.white
+                                : colors.primary800
+                            }
+                          />
+                        </View>
                       </View>
-                    </View>
-                    <Text
-                      style={[
-                        styles.storyLabel,
-                        selectedFilter === cat.label && styles.storyLabelActive,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {cat.label}
-                    </Text>
-                  </ScalePressable>
-                ))}
+                      <Text
+                        style={[
+                          styles.storyLabel,
+                          isSelected && styles.storyLabelActive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {cleanLabel}
+                      </Text>
+                    </ScalePressable>
+                  );
+                })}
               </ScrollView>
             </View>
 
@@ -251,7 +269,7 @@ export default function HomeScreen({ navigation }) {
                 {filteredBlogs.length === 0 ? (
                   <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>
-                      No articles found for "{selectedFilter}"
+                      No hazard articles found for "{selectedFilter}"
                     </Text>
                   </View>
                 ) : (
@@ -318,22 +336,25 @@ export default function HomeScreen({ navigation }) {
             )}
           </ScrollView>
 
-          {/* Floating Cross-Platform Pill */}
-          <View
-            style={[
-              styles.floatingPillContainer,
-              { bottom: Math.max(insets.bottom + 10, 20) },
-            ]}
-            pointerEvents="box-none"
-          >
+          {/* Permanently Floating Pill Bar (Positioned Absolute to remain visible everywhere) */}
+          <View style={styles.floatingPillContainer} pointerEvents="box-none">
             <View style={styles.floatingPill}>
               <TouchableOpacity
                 style={[
                   styles.pillSegment,
                   viewMode === 'Feed' && styles.pillSegmentActive,
                 ]}
-                onPress={() => setViewMode('Feed')}
+                onPress={() => {
+                  setViewMode('Feed');
+                  navigation.navigate('HistoryTab');
+                }}
               >
+                <Ionicons
+                  name="time-outline"
+                  size={15}
+                  color={viewMode === 'Feed' ? colors.primary800 : colors.primary100}
+                  style={{ marginRight: 6 }}
+                />
                 <Text
                   style={[
                     styles.pillText,
@@ -354,6 +375,12 @@ export default function HomeScreen({ navigation }) {
                   navigation.navigate('LocationTab');
                 }}
               >
+                <Ionicons
+                  name="map-outline"
+                  size={15}
+                  color={viewMode === 'Impact Map' ? colors.primary800 : colors.primary100}
+                  style={{ marginRight: 6 }}
+                />
                 <Text
                   style={[
                     styles.pillText,
@@ -426,21 +453,21 @@ export default function HomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safeAreaOverride: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  webWrapper: {
-    flex: 1,
-    alignItems: 'center',
+  safeAreaOverride: { flex: 1, backgroundColor: '#ffffff' },
+  webWrapper: { 
+    flex: 1, 
+    alignItems: 'center', 
     backgroundColor: '#f3f6f3',
-  },
-  maxContainer: {
-    flex: 1,
     width: '100%',
-    maxWidth: 600,
-    backgroundColor: '#ffffff',
+    height: '100%',
+  },
+  maxContainer: { 
+    flex: 1, 
+    width: '100%', 
+    maxWidth: 600, 
+    backgroundColor: '#ffffff', 
     position: 'relative',
+    overflow: 'hidden', 
   },
   topBar: {
     flexDirection: 'row',
@@ -452,333 +479,113 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     zIndex: 10,
   },
-  menuIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.full,
-    backgroundColor: colors.primary50,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  brandContainer: {
-    alignItems: 'center',
-  },
-  brandTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.primary800,
-    letterSpacing: -0.5,
-  },
-  brandSub: {
-    color: colors.primary600,
-  },
-  locationMeta: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: colors.primary600,
-    letterSpacing: 1,
-  },
-  reloadBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.full,
-    backgroundColor: colors.primary50,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollContentContainer: {
-    paddingTop: 4,
-  },
+  menuIconBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary50, justifyContent: 'center', alignItems: 'center' },
+  brandContainer: { alignItems: 'center' },
+  brandTitle: { fontSize: 22, fontWeight: '800', color: colors.primary800, letterSpacing: -0.5 },
+  brandSub: { color: colors.primary600 },
+  locationMeta: { fontSize: 9, fontWeight: '800', color: colors.primary600, letterSpacing: 1 },
+  reloadBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary50, justifyContent: 'center', alignItems: 'center' },
+  scrollViewStyle: { flex: 1 },
+  scrollContentContainer: { paddingTop: 4 },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.cardBg,
     borderRadius: radius.full,
     paddingHorizontal: spacing.base,
-    paddingVertical: 10,
+    paddingVertical: 6,
     marginHorizontal: spacing.base,
     borderWidth: 1,
     borderColor: colors.border,
     marginBottom: spacing.xs,
   },
-  searchIcon: {
-    marginRight: 8,
+  searchIcon: { marginRight: 8 },
+  searchInput: { flex: 1, fontSize: 13, color: colors.textPrimary, padding: 0 },
+  searchSubmitBtn: { padding: 4 },
+  storiesWrapper: { marginVertical: spacing.xs },
+  storiesScrollContent: { paddingHorizontal: spacing.base },
+  storyAvatarItem: { alignItems: 'center', marginRight: spacing.sm, width: 72 },
+  storyRing: { width: 58, height: 58, borderRadius: 29, padding: 2.5, borderWidth: 2, borderColor: 'transparent' },
+  storyRingActive: { borderColor: colors.primary600 },
+  storyInnerCircle: { flex: 1, borderRadius: 26, backgroundColor: colors.primary100, justifyContent: 'center', alignItems: 'center' },
+  storyLabel: { fontSize: 10.5, fontWeight: '600', color: colors.textSecondary, marginTop: 4, textAlign: 'center', width: '100%' },
+  storyLabelActive: { color: colors.primary800, fontWeight: '800' },
+  heroCardContainer: { marginHorizontal: spacing.base, marginVertical: spacing.sm, borderRadius: radius.xl, backgroundColor: colors.primary800, padding: spacing.lg },
+  heroCardContent: { width: '100%' },
+  heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs },
+  heroTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.full, gap: 4 },
+  heroTagText: { color: colors.white, fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  heroMetaText: { color: colors.primary100, fontSize: 11, fontWeight: '600' },
+  heroTitle: { fontSize: 22, fontWeight: '800', color: colors.white, lineHeight: 28, marginTop: 4 },
+  heroSubtitle: { fontSize: 13, color: colors.primary100, marginTop: 6, lineHeight: 18 },
+  heroScanBtn: { marginTop: spacing.md, backgroundColor: colors.white, borderRadius: radius.full, paddingVertical: 12, paddingHorizontal: spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  heroScanIcon: { marginRight: 8 },
+  heroScanBtnText: { color: colors.primary800, fontSize: 14, fontWeight: '800' },
+  heroArrowIcon: { marginLeft: 6 },
+  sectionHeader: { paddingHorizontal: spacing.base, marginTop: spacing.md, marginBottom: spacing.xs },
+  sectionSubtitle: { fontSize: 10, fontWeight: '800', color: colors.primary600, letterSpacing: 1 },
+  sectionMainTitle: { fontSize: 20, fontWeight: '800', color: colors.primary800 },
+  bentoGrid: { paddingHorizontal: spacing.base, gap: spacing.sm },
+  bentoCard: { backgroundColor: colors.primary800, borderRadius: radius.xl, padding: spacing.base, justifyContent: 'space-between', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  bentoCardLarge: { width: '100%', minHeight: 170 },
+  bentoCardHalf: { width: '100%', minHeight: 150 },
+  bentoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  badgePill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.xs },
+  badgePillText: { color: colors.white, fontSize: 9.5, fontWeight: '800', letterSpacing: 0.5 },
+  bentoCategory: { color: colors.primary100, fontSize: 11, fontWeight: '600' },
+  bentoBody: { marginVertical: 10 },
+  bentoTitleLarge: { color: colors.white, fontSize: 17, fontWeight: '800', lineHeight: 23 },
+  bentoTitle: { color: colors.white, fontSize: 15, fontWeight: '700', lineHeight: 20 },
+  bentoSnippet: { color: colors.primary100, fontSize: 12, marginTop: 4, lineHeight: 16 },
+  bentoFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)' },
+  bentoSource: { color: colors.primary100, fontSize: 11, fontWeight: '600' },
+  bentoFooterIcon: { transform: [{ rotate: '45deg' }] },
+  floatingPillContainer: { 
+    position: 'absolute', 
+    left: 0, 
+    right: 0, 
+    bottom: 78, // Positioned safely right above the bottom tab bar on your screen
+    alignItems: 'center', 
+    zIndex: 99999, 
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.textPrimary,
-    padding: 0,
+  floatingPill: { 
+    flexDirection: 'row', 
+    borderRadius: radius.full, 
+    padding: 3, 
+    backgroundColor: colors.primary800, 
+    elevation: 15, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.4, 
+    shadowRadius: 6, 
+    borderWidth: 1.5, 
+    borderColor: 'rgba(255, 255, 255, 0.3)', 
   },
-  storiesWrapper: {
-    marginVertical: spacing.xs,
-  },
-  storiesScrollContent: {
-    paddingHorizontal: spacing.base,
-  },
-  storyAvatarItem: {
-    alignItems: 'center',
-    marginRight: spacing.sm,
-    width: 72,
-  },
-  storyRing: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    padding: 2.5,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  storyRingActive: {
-    borderColor: colors.primary600,
-  },
-  storyInnerCircle: {
-    flex: 1,
-    borderRadius: 26,
-    backgroundColor: colors.primary100,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  storyLabel: {
-    fontSize: 10.5,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginTop: 4,
-    textAlign: 'center',
-    width: '100%',
-  },
-  storyLabelActive: {
-    color: colors.primary800,
-    fontWeight: '800',
-  },
-  heroCardContainer: {
-    marginHorizontal: spacing.base,
-    marginVertical: spacing.sm,
-    borderRadius: radius.xl,
-    backgroundColor: colors.primary800,
-    padding: spacing.lg,
-  },
-  heroCardContent: {
-    width: '100%',
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  heroTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-    gap: 4,
-  },
-  heroTagText: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  heroMetaText: {
-    color: colors.primary100,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  heroTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.white,
-    lineHeight: 28,
-    marginTop: 4,
-  },
-  heroSubtitle: {
-    fontSize: 13,
-    color: colors.primary100,
-    marginTop: 6,
-    lineHeight: 18,
-  },
-  heroScanBtn: {
-    marginTop: spacing.md,
-    backgroundColor: colors.white,
-    borderRadius: radius.full,
-    paddingVertical: 12,
-    paddingHorizontal: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
+  pillSegment: { 
+    flexDirection: 'row', 
+    paddingHorizontal: 16, 
+    paddingVertical: 9, 
+    borderRadius: radius.full, 
+    alignItems: 'center', 
     justifyContent: 'center',
   },
-  heroScanIcon: {
-    marginRight: 8,
+  pillSegmentActive: { 
+    backgroundColor: colors.white, 
   },
-  heroScanBtnText: {
-    color: colors.primary800,
-    fontSize: 14,
+  pillText: { 
+    color: colors.primary100, 
+    fontSize: 12, 
+    fontWeight: '700', 
+  },
+  pillTextActive: { 
+    color: colors.primary800, 
     fontWeight: '800',
   },
-  heroArrowIcon: {
-    marginLeft: 6,
-  },
-  sectionHeader: {
-    paddingHorizontal: spacing.base,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  sectionSubtitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: colors.primary600,
-    letterSpacing: 1,
-  },
-  sectionMainTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.primary800,
-  },
-  bentoGrid: {
-    paddingHorizontal: spacing.base,
-    gap: spacing.sm,
-  },
-  bentoCard: {
-    backgroundColor: colors.primary800,
-    borderRadius: radius.xl,
-    padding: spacing.base,
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  bentoCardLarge: {
-    width: '100%',
-    minHeight: 170,
-  },
-  bentoCardHalf: {
-    width: '100%',
-    minHeight: 150,
-  },
-  bentoHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  badgePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.xs,
-  },
-  badgePillText: {
-    color: colors.white,
-    fontSize: 9.5,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  bentoCategory: {
-    color: colors.primary100,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  bentoBody: {
-    marginVertical: 10,
-  },
-  bentoTitleLarge: {
-    color: colors.white,
-    fontSize: 17,
-    fontWeight: '800',
-    lineHeight: 23,
-  },
-  bentoTitle: {
-    color: colors.white,
-    fontSize: 15,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  bentoSnippet: {
-    color: colors.primary100,
-    fontSize: 12,
-    marginTop: 4,
-    lineHeight: 16,
-  },
-  bentoFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.15)',
-  },
-  bentoSource: {
-    color: colors.primary100,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  bentoFooterIcon: {
-    transform: [{ rotate: '45deg' }],
-  },
-  floatingPillContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 100,
-  },
-  floatingPill: {
-    flexDirection: 'row',
-    borderRadius: radius.full,
-    padding: 4,
-    backgroundColor: colors.primary800,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  pillSegment: {
-    paddingHorizontal: 22,
-    paddingVertical: 8,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pillSegmentActive: {
-    backgroundColor: colors.white,
-  },
-  pillText: {
-    color: colors.primary100,
-    fontSize: 12.5,
-    fontWeight: '700',
-  },
-  pillTextActive: {
-    color: colors.primary800,
-  },
-  emptyContainer: {
-    padding: spacing.lg,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: 14,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  drawerSafeArea: {
-    flex: 1,
-    backgroundColor: colors.cardBg,
-    paddingHorizontal: 20,
-  },
-  drawerHeaderCustom: {
-    paddingTop: Platform.OS === 'ios' ? 0 : spacing.sm,
-  },
-  drawerScroll: {
-    flex: 1,
-    marginTop: 10,
-  },
-  menuRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  emptyContainer: { padding: spacing.lg, alignItems: 'center' },
+  emptyText: { color: colors.textSecondary, fontSize: 14 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  drawerSafeArea: { flex: 1, backgroundColor: colors.cardBg, paddingHorizontal: 20 },
+  drawerHeaderCustom: { paddingTop: Platform.OS === 'ios' ? 0 : spacing.sm },
+  drawerScroll: { flex: 1, marginTop: 10 },
+  menuRowLeft: { flexDirection: 'row', alignItems: 'center' },
 });

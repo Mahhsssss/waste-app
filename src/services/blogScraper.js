@@ -1,129 +1,76 @@
-export const fetchScrapImpactBlogs = async () => {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3-second timeout
-
-    const response = await fetch(
-      'https://api.rss2json.com/v1/api.json?rss_url=https://news.google.com/rss/search?q=recycling+waste+pollution+hazard&hl=en-US&gl=US&ceid=US:en',
-      { signal: controller.signal }
-    );
-    clearTimeout(timeoutId);
-
-    const data = await response.json();
-
-    if (data && data.status === 'ok' && data.items && data.items.length > 0) {
-      return data.items.map((item, index) => ({
-        id: `live-${index}`,
-        title: item.title,
-        source: item.author || 'Eco Watch',
-        link: item.link,
-        date: new Date(item.pubDate).toLocaleDateString(),
-        snippet: item.description.replace(/<[^>]*>?/gm, '').slice(0, 110) + '...',
-        category: getScrapCategory(item.title),
-        urgency: index % 2 === 0 ? 'HIGH HAZARD' : 'WARNING',
-      }));
-    }
-    return getFallbackBlogs();
-  } catch (error) {
-    console.warn('Live API request skipped, loading curated category blogs:', error.message);
-    return getFallbackBlogs();
-  }
-};
-
-const getScrapCategory = (title) => {
-  const t = title.toLowerCase();
-  if (t.includes('paper') || t.includes('cardboard') || t.includes('deforestation')) return 'Paper & Cardboard';
-  if (t.includes('plastic') || t.includes('microplastic') || t.includes('bottle')) return 'Plastics';
-  if (t.includes('electronic') || t.includes('e-waste') || t.includes('battery') || t.includes('circuit')) return 'E-Waste';
-  if (t.includes('metal') || t.includes('steel') || t.includes('aluminum') || t.includes('copper')) return 'Metals';
-  if (t.includes('glass') || t.includes('cullet') || t.includes('silica')) return 'Glass';
-  if (t.includes('textile') || t.includes('fabric') || t.includes('fashion') || t.includes('organic')) return 'Textiles & Organic Waste';
-  return 'Hazardous Scrap';
-};
-
-const getFallbackBlogs = () => [
-  {
-    id: '1',
-    title: 'Paper Waste & Deforestation: The Methane Crisis in Landfills',
-    source: 'Forest Protection Alliance',
-    link: 'https://www.epa.gov',
-    date: 'Sep 2026',
-    snippet: 'Decomposing paper produce high volumes of methane when buried without oxygen under landfill debris.',
-    category: 'Paper & Cardboard',
-    urgency: 'HIGH HAZARD',
-    accentColor: '#8D6E63',
-    icon: 'document-text-outline',
-  },
-  {
-    id: '2',
-    title: 'Microplastics In Drinking Water & Agricultural Soils',
-    source: 'Global Eco Science',
-    link: 'https://www.nature.com',
-    date: 'Sep 2026',
-    snippet: 'Non-recycled single-use plastics break down into toxic micro-particles swallowed by marine and land ecosystems.',
-    category: 'Plastics',
-    urgency: 'CRITICAL',
-    accentColor: '#E65100',
-    icon: 'trash-bin-outline',
-  },
-  {
-    id: '3',
-    title: 'Lithium Battery Explosions: The Thermal Landfill Hazard',
-    source: 'Environmental Tech Watch',
-    link: 'https://www.epa.gov/recycle/used-lithium-ion-batteries',
-    date: 'Sep 2026',
-    snippet: 'Improperly discarded phone and laptop batteries cause hundreds of dangerous thermal fires in scrap facilities.',
-    category: 'E-Waste',
-    urgency: 'CRITICAL',
-    accentColor: '#D32F2F',
-    icon: 'hardware-chip-outline',
-  },
-  {
-    id: '4',
-    title: 'Industrial Scrap Steel: The Hidden Carbon Footprint',
-    source: 'Clean Energy Digest',
-    link: 'https://www.sciencedirect.com',
-    date: 'Aug 2026',
-    snippet: 'Failing to melt and reuse scrap metal increases primary mining carbon emissions by over 60%.',
-    category: 'Metals',
-    urgency: 'MODERATE',
-    accentColor: '#455A64',
-    icon: 'build-outline',
-  },
-  {
-    id: '5',
-    title: 'Glass Containers in Landfills: 1 Million Years to Decompose',
-    source: 'Zero Waste Council',
-    link: 'https://www.gpi.org',
-    date: 'Aug 2026',
-    snippet: 'Glass is infinitely recyclable without loss of quality, yet millions of tons sit unused in city landfills.',
-    category: 'Glass',
-    urgency: 'WARNING',
-    accentColor: '#00897B',
-    icon: 'wine-outline',
-  },
-  {
-    id: '6',
-    title: 'Chemical Leaching from Acidic Industrial Scrap Containers',
-    source: 'Hazardous Waste Institute',
-    link: 'https://www.who.int',
-    date: 'Aug 2026',
-    snippet: 'Unregulated solvent and acid drum scrap contaminates local soil chemistry and nearby water tables.',
-    category: 'Hazardous Scrap',
-    urgency: 'CRITICAL',
-    accentColor: '#C62828',
-    icon: 'warning-outline',
-  },
-  {
-    id: '7',
-    title: 'Fast Fashion Textiles: Synthetic Microfibers in Oceans',
-    source: 'Textile Recycle Lab',
-    link: 'https://www.apparelcoalition.org',
-    date: 'Jul 2026',
-    snippet: 'Polyester and nylon clothing scrap shed billions of non-biodegradable synthetic threads into municipal waterways.',
-    category: 'Textiles & Organic Waste',
-    urgency: 'HIGH HAZARD',
-    accentColor: '#6A1B9A',
-    icon: 'shirt-outline',
-  },
-];
+// services/blogScraper.js
+export async function fetchScrapImpactBlogs() {
+  // Directly returning curated environmental hazard data focused entirely on waste harm
+  return [
+    {
+      id: 'hazard-1',
+      title: 'Polymer Leaching: How Microplastics Disrupt Hormonal Pathways',
+      snippet: 'Discarded plastics breakdown under UV and friction, releasing endocrine-disrupting chemicals (EDCs) like phthalates and BPA directly into soil and runoff water systems.',
+      category: 'Plastics',
+      urgency: 'TOXIC LEACH',
+      accentColor: '#e64a19',
+      source: 'EcoToxicology Research Lab',
+      link: 'https://www.sciencedaily.com',
+    },
+    {
+      id: 'hazard-2',
+      title: 'E-Waste Heavy Metal Seepage: Lead and Cadmium in Groundwater',
+      snippet: 'Improperly discarded circuit boards and lithium batteries corrode in landfills, leaking toxic lead, mercury, and cadmium into surrounding aquifers and local ecosystems.',
+      category: 'E-Waste',
+      urgency: 'HEAVY METALS',
+      accentColor: '#c2185b',
+      source: 'Global Electronic Waste Monitor',
+      link: 'https://www.sciencedaily.com',
+    },
+    {
+      id: 'hazard-3',
+      title: 'Organic Food & Textile Waste: Accelerated Methane Generation',
+      snippet: 'When natural fibers and organic waste are compressed without oxygen in landfills, they produce massive methane plumes with 80x the warming power of carbon dioxide.',
+      category: 'Textiles & Organic Waste',
+      urgency: 'METHANE RISK',
+      accentColor: '#7b1fa2',
+      source: 'Climate Impact Coalition',
+      link: 'https://www.sciencedaily.com',
+    },
+    {
+      id: 'hazard-4',
+      title: 'Hazardous Chemical Sludge: Acidic Industrial Scrap Exposure',
+      snippet: 'Unregulated dumping of chemical waste and industrial solvents burns through soil microbiomes, wiping out vital organisms necessary for regional vegetation growth.',
+      category: 'Hazardous Scrap',
+      urgency: 'CRITICAL',
+      accentColor: '#d32f2f',
+      source: 'Industrial Safety Bureau',
+      link: 'https://www.sciencedaily.com',
+    },
+    {
+      id: 'hazard-5',
+      title: 'Deforestation Impact: The Carbon Toll of Single-Use Cardboard',
+      snippet: 'Unrecycled paper and packaging products drive intensive logging cycles, destroying old-growth forests that act as primary planetary carbon sinks.',
+      category: 'Paper & Cardboard',
+      urgency: 'DEFORESTATION',
+      accentColor: '#f57c00',
+      source: 'Forestry Defense Registry',
+      link: 'https://www.sciencedaily.com',
+    },
+    {
+      id: 'hazard-6',
+      title: 'Raw Metal Extraction: Acid Mine Drainage and Habitat Loss',
+      snippet: 'Mining raw ores to replace unrecovered scrap metals produces toxic sulfuric acid runoff, devastating aquatic life and poisoning river ecosystems downstream.',
+      category: 'Metals',
+      urgency: 'EXTRACTION HARM',
+      accentColor: '#558b2f',
+      source: 'Earth Mineral Watch',
+      link: 'https://www.sciencedaily.com',
+    },
+    {
+      id: 'hazard-7',
+      title: 'Persistent Silica: Why Non-Degradable Glass Endangers Wildlife',
+      snippet: 'Glass fragments left in natural environments do not decompose; instead, they act as optical lenses that start brushfires and cause severe lacerations to wildlife.',
+      category: 'Glass',
+      urgency: 'NON-DEGRADABLE',
+      accentColor: '#0288d1',
+      source: 'Wildlife Conservation Board',
+      link: 'https://www.sciencedaily.com',
+    },
+  ];
+}

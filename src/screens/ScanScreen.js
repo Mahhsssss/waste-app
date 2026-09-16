@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, View, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -10,6 +10,10 @@ const API_URL = "https://mahhsssss--waste-detection-detect.modal.run";
 export default function ScanScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraRef, setCameraRef] = useState(null);
+  
+  // Added missing states
+  const [loading, setLoading] = useState(false);
+  const [detection, setDetection] = useState(null);
 
   // Request permissions if not yet granted
   if (!permission) {
@@ -32,15 +36,15 @@ export default function ScanScreen({ navigation }) {
     );
   }
 
-  // Handle Photo Capture Action
+  // Handle Photo Capture & API Action
   const takePicture = async () => {
-    if (!cameraRef.current || loading) return;
+    if (!cameraRef || loading) return;
 
     setLoading(true);
     setDetection(null);
 
     try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      const photo = await cameraRef.takePictureAsync({ quality: 0.7 });
 
       const formData = new FormData();
       formData.append('file', {
@@ -68,35 +72,92 @@ export default function ScanScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing="back">
-        {detection && (
-          <View style={styles.resultBox}>
-            <Text style={styles.label}>
-              {detection.class !== "Connection Error" && detection.class !== "nothing" ? "🗑️ " : "⚠️ "}
-              {detection.class.toUpperCase()}
-            </Text>
-            {detection.confidence > 0 && (
-              <Text style={styles.conf}>
-                {(detection.confidence * 100).toFixed(1)}% Confidence
-              </Text>
-            )}
-          </View>
-        )}
+      {/* 1. CameraView is now entirely empty to prevent child-rendering warnings/crashes */}
+      <CameraView 
+        ref={(ref) => setCameraRef(ref)} 
+        style={StyleSheet.absoluteFillObject} 
+        facing="back"
+      />
 
-        <View style={styles.footer}>
-          <Pressable 
-            style={[styles.scanButton, loading && styles.disabledButton]} 
-            onPress={scanTrash}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.scanText}>Classify Waste</Text>
-            )}
-          </Pressable>
+      {/* 2. All overlay UI elements are now correct siblings positioned on top */}
+      {detection && (
+        <View style={styles.resultBox} pointerEvents="box-none">
+          <Text style={styles.label}>
+            {detection.class !== "Connection Error" && detection.class !== "nothing" ? "🗑️ " : "⚠️ "}
+            {detection.class.toUpperCase()}
+          </Text>
+          {detection.confidence > 0 && (
+            <Text style={styles.conf}>
+              {(detection.confidence * 100).toFixed(1)}% Confidence
+            </Text>
+          )}
         </View>
-      </CameraView>
+      )}
+
+      <View style={styles.footer} pointerEvents="box-none">
+        <Pressable 
+          style={[styles.scanButton, loading && styles.disabledButton]} 
+          onPress={takePicture}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.scanText}>Classify Waste</Text>
+          )}
+        </Pressable>
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  resultBox: {
+    position: 'absolute',
+    top: 60,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  label: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  conf: {
+    color: '#ddd',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 40,
+    alignSelf: 'center',
+    width: '100%',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  scanButton: {
+    backgroundColor: colors.primary600 || '#2e7d32',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 30,
+    elevation: 4,
+  },
+  disabledButton: {
+    opacity: 0.7,
+  },
+  scanText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});

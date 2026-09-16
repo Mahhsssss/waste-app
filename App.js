@@ -1,7 +1,4 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
 import React, { useState } from 'react';
-import './src/global.css';
 import { StyleSheet, View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -11,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import AuthNavigator from './src/auth';
-import SplashScreen from './src/screens/SplashScreen'; // Imported your new screen
+import SplashScreen from './src/screens/SplashScreen';
 
 // Main Screens
 import HomeScreen from './src/screens/HomeScreen';
@@ -20,62 +17,57 @@ import ScanScreen from './src/screens/ScanScreen';
 import NgoScreen from './src/screens/NgoScreen';
 import { colors } from './src/globalStyles';
 
-const LocationScreenPlaceholder = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text style={{ color: colors.primary800 }}>Location Screen Coming Soon</Text>
-  </View>
-);
-
 const Tab = createBottomTabNavigator();
 
-export default function App() {
+function MainAppTabs() {
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          headerShown: false,
-          tabBarShowLabel: false,
-          tabBarStyle: styles.tabBar,
-          tabBarActiveTintColor: colors.white,
-          tabBarInactiveTintColor: colors.primary100,
-          tabBarIcon: ({ focused, color }) => {
-            let iconName = 'home';
-            if (route.name === 'HomeTab') iconName = focused ? 'home' : 'home-outline';
-            
-            else if (route.name === 'NgoTab') iconName = focused ? 'search' : 'search-outline';
-            return <Ionicons name={iconName} size={24} color={color} />;
-          },
-        })}
-      >
-        <Tab.Screen name="HomeTab" component={HomeScreen} />
-        {/* <Tab.Screen name="LocationTab" component={LocationScreen} /> */}
-        
-        <Tab.Screen
-          name="ScanTab"
-          component={ScanScreen}
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <View style={styles.scanButtonContainer}>
-                <Ionicons
-                  name={focused ? "camera" : "camera-outline"}
-                  size={30}
-                  color={colors.white}
-                />
-              </View>
-            ),
-          }}
-        />
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarShowLabel: false,
+        tabBarStyle: styles.tabBar,
+        tabBarActiveTintColor: colors.white,
+        tabBarInactiveTintColor: colors.primary100,
+        tabBarIcon: ({ focused, color }) => {
+          let iconName = 'home';
+          if (route.name === 'HomeTab') iconName = focused ? 'home' : 'home-outline';
+          else if (route.name === 'NgoTab') iconName = focused ? 'search' : 'search-outline';
+          else if (route.name === 'LocationTab') iconName = focused ? 'location' : 'location-outline';
+          return <Ionicons name={iconName} size={24} color={color} />;
+        },
+      })}
+    >
+      <Tab.Screen name="HomeTab" component={HomeScreen} />
+      {/* <Tab.Screen name="LocationTab" component={LocationScreen} /> */}
+      
+      <Tab.Screen
+        name="ScanTab"
+        component={ScanScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.scanButtonContainer}>
+              <Ionicons
+                name={focused ? "camera" : "camera-outline"}
+                size={30}
+                color={colors.white}
+              />
+            </View>
+          ),
+        }}
+      />
 
-        <Tab.Screen name="NgoTab" component={NgoScreen} />
-      </Tab.Navigator>
-    </NavigationContainer>
+      <Tab.Screen name="NgoTab" component={NgoScreen} />
+    </Tab.Navigator>
   );
 }
 
 function RootNavigator() {
   const { session, loading } = useAuth();
 
-  // Fixed session syntax check
+  if (loading) {
+    return null; // Or a loading spinner if you prefer
+  }
+
   if (session?.user) {
     return <MainAppTabs />;
   }
@@ -95,8 +87,10 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar style="dark" />
-        <RootNavigator />
+        <NavigationContainer>
+          <StatusBar style="dark" />
+          <RootNavigator />
+        </NavigationContainer>
       </AuthProvider>
     </SafeAreaProvider>
   );
