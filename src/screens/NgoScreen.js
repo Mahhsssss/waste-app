@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Text,
   View,
@@ -8,36 +8,61 @@ import {
   StyleSheet,
   Linking,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import globalStyles, { colors, spacing, radius } from '../globalStyles';
+import { supabase } from '../services/supabase'; // Adjust path to your supabase client instance
 
 export default function NgoSearchScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
+  
+  const [hubs, setHubs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Sample recovery hubs data matching your screenshot style
-  const [hubs] = useState([
-    {
-      id: '1',
-      name: 'greenciti',
-      type: 'NGO',
-      address: '19, Dreams Mall, Near Bhandup Railway Station, L.B...',
-      streams: ['plastic', 'metal', 'e-waste devices', 'cardboard and paper', 'fabric', 'organic'],
-    },
-    {
-      id: '2',
-      name: 'saahas',
-      type: 'NGO',
-      address: '#21, Ground Floor, MCHS Colony, 5th C Cross, 16th M...',
-      streams: ['plastic', 'metal', 'glass', 'e-waste devices', 'cardboard and paper', 'fabric', 'furniture', 'organic', 'rubber', 'other'],
-    },
-  ]);
+  // Fetch markers data from your Supabase table on mount
+  useEffect(() => {
+    fetchHubsFromSupabase();
+  }, []);
+
+  const fetchHubsFromSupabase = async () => {
+    try {
+      setLoading(true);
+      // Replace 'markers' with your actual Supabase table name if different
+      const { data, error } = await supabase
+        .from('markers') 
+        .select('*');
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        // Format the database rows to map `type_of_trash` into an array of streams
+        const formattedHubs = data.map((item, index) => ({
+          id: item.id ? item.id.toString() : index.toString(),
+          name: item.name || '',
+          type: item.type || 'NGO',
+          address: item.address || '',
+          phone: item.phone ? item.phone.toString() : '',
+          // Handles comma-separated values from your CSV's type_of_trash column
+          streams: typeof item.type_of_trash === 'string'
+            ? item.type_of_trash.split(',').map(s => s.trim())
+            : [],
+        }));
+        setHubs(formattedHubs);
+      }
+    } catch (error) {
+      console.warn('Error fetching recovery hubs from Supabase:', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSearchSubmit = () => {
-    // Strips out unwanted semicolons or formatting issues when submitted
     const cleaned = searchQuery.replace(/;/g, '').trim();
     setSubmittedQuery(cleaned);
   };
@@ -63,7 +88,7 @@ export default function NgoSearchScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Search Bar with Working Search Icon Trigger */}
+          {/* Search Bar */}
           <View style={styles.searchContainer}>
             <Ionicons name="search-outline" size={18} color={colors.primary600} style={styles.searchIcon} />
             <TextInput
@@ -80,7 +105,7 @@ export default function NgoSearchScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Available Centers Section Header */}
+          {/* Section Header */}
           <View style={styles.sectionMetaRow}>
             <Text style={styles.availableTitle}>Available Centers</Text>
             <View style={styles.countBadge}>
@@ -88,55 +113,72 @@ export default function NgoSearchScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Hub List */}
-          <ScrollView
-            contentContainerStyle={[
-              styles.scrollContent,
-              { paddingBottom: Math.max(insets.bottom + 40, 80) },
-            ]}
-            showsVerticalScrollIndicator={false}
-          >
-            {filteredHubs.map((hub) => (
-              <View key={hub.id} style={styles.hubCard}>
-                <View style={styles.hubCardHeader}>
-                  <Text style={styles.hubName}>{hub.name}</Text>
-                  <View style={styles.ngoBadge}>
-                    <Text style={styles.ngoBadgeText}>{hub.type}</Text>
-                  </View>
+          {/* Content / Loader */}
+          {loading ? (
+            <View style={styles.loaderContainer}>
+              <ActivityIndicator size="large" color={colors.primary800} />
+              <Text style={styles.loaderText}>Loading hubs from Supabase...</Text>
+            </View>
+          ) : (
+            <ScrollView
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: Math.max(insets.bottom + 40, 80) },
+              ]}
+              showsVerticalScrollIndicator={false}
+            >
+              {filteredHubs.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No recovery hubs found matching your search.</Text>
                 </View>
-
-                <Text style={styles.hubAddress} numberOfLines={1}>{hub.address}</Text>
-
-                <View style={styles.divider} />
-
-                <Text style={styles.streamsLabel}>Accepted Streams:</Text>
-                <View style={styles.streamsContainer}>
-                  {hub.streams.map((stream, idx) => (
-                    <View key={idx} style={styles.streamPill}>
-                      <Text style={styles.streamPillText}>{stream}</Text>
+              ) : (
+                filteredHubs.map((hub) => (
+                  <View key={hub.id} style={styles.hubCard}>
+                    <View style={styles.hubCardHeader}>
+                      <Text style={styles.hubName}>{hub.name}</Text>
+                      <View style={styles.ngoBadge}>
+                        <Text style={styles.ngoBadgeText}>{hub.type}</Text>
+                      </View>
                     </View>
-                  ))}
-                </View>
 
-                <View style={styles.divider} />
+                    <Text style={styles.hubAddress} numberOfLines={1}>{hub.address}</Text>
 
-                <View style={styles.hubCardFooter}>
-                  <View style={styles.footerLocationRow}>
-                    <Ionicons name="location-outline" size={14} color={colors.primary600} />
-                    <Text style={styles.footerAddressText} numberOfLines={1}>{hub.address}</Text>
+                    <View style={styles.divider} />
+
+                    <Text style={styles.streamsLabel}>Accepted Streams:</Text>
+                    <View style={styles.streamsContainer}>
+                      {hub.streams.map((stream, idx) => (
+                        <View key={idx} style={styles.streamPill}>
+                          <Text style={styles.streamPillText}>{stream}</Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    <View style={styles.divider} />
+
+                    <View style={styles.hubCardFooter}>
+                      <View style={styles.footerLocationRow}>
+                        <Ionicons name="location-outline" size={14} color={colors.primary600} />
+                        <Text style={styles.footerAddressText} numberOfLines={1}>{hub.address}</Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={styles.callBtn}
+                        onPress={() => {
+                          if (hub.phone) {
+                            Linking.openURL(`tel:${hub.phone}`);
+                          }
+                        }}
+                      >
+                        <Ionicons name="call" size={14} color={colors.white} style={{ marginRight: 4 }} />
+                        <Text style={styles.callBtnText}>Call Hub</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-
-                  <TouchableOpacity
-                    style={styles.callBtn}
-                    onPress={() => Linking.openURL('tel:911')}
-                  >
-                    <Ionicons name="call" size={14} color={colors.white} style={{ marginRight: 4 }} />
-                    <Text style={styles.callBtnText}>Call Hub</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
+                ))
+              )}
+            </ScrollView>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -179,9 +221,13 @@ const styles = StyleSheet.create({
   availableTitle: { fontSize: 16, fontWeight: '800', color: colors.primary800 },
   countBadge: { backgroundColor: colors.primary50, paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.full },
   countText: { fontSize: 11, fontWeight: '700', color: colors.primary800 },
+  loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  loaderText: { marginTop: 10, fontSize: 13, color: colors.textSecondary },
+  emptyContainer: { padding: 40, alignItems: 'center' },
+  emptyText: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: spacing.base, gap: spacing.sm },
   hubCard: {
-    backgroundColor: colors.cardBg || '#f4f8f4',
+    backgroundColor: '#f4f8f4',
     borderRadius: radius.xl,
     padding: spacing.base,
     borderWidth: 1,
