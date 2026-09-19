@@ -11,11 +11,12 @@ import {
   FlatList,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 
-import globalStyles, { colors } from '../globalStyles';
+import globalStyles, { colors, spacing, radius } from '../globalStyles';
 import showAlert from '../utils/alert';
 import {
   YOLO_CLASSES,
@@ -77,12 +78,12 @@ export default function ScanScreen({ navigation }) {
       if (Platform.OS === 'web') {
         const res = await fetch(imageUri);
         const blob = await res.blob();
-        formData.append('file', blob, 'trash.jpg');
+        formData.append('file', blob, 'waste_scan.jpg');
       } else {
         formData.append('file', {
           uri: imageUri,
           type: 'image/jpeg',
-          name: 'trash.jpg',
+          name: 'waste_scan.jpg',
         });
       }
 
@@ -203,7 +204,10 @@ export default function ScanScreen({ navigation }) {
 
     try {
       setLoading(true);
-      const photo = await cam.takePictureAsync({ quality: 0.7 });
+      const photo = await cam.takePictureAsync({
+        quality: 0.8,
+        skipProcessing: true,
+      });
       if (photo?.uri) {
         await classifyImageUri(photo.uri);
       } else {

@@ -9,46 +9,102 @@ import {
   Linking,
   Platform,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import globalStyles, { colors, spacing, radius } from '../globalStyles';
+import { supabase } from '../services/supabase';
+
+const DEFAULT_HUBS = [
+  {
+    id: '1',
+    name: 'greenciti',
+    type: 'NGO',
+    address: '19, Dreams Mall, Near Bhandup Railway Station, L.B.S. Marg, Bhandup West, Mumbai',
+    fullAddress: '19, Dreams Mall, Near Bhandup Railway Station, L.B.S. Marg, Bhandup West, Mumbai, Maharashtra 400078',
+    latitude: 19.148,
+    longitude: 72.936,
+    phone: '8097479747',
+    website: 'https://www.greenciti.org',
+    facilityType: 'Community Material Recovery & Drop-off Hub',
+    timings: 'Monday - Saturday: 9:30 AM – 6:00 PM (Closed Sundays)',
+    guidelines: 'Rinse and dry plastic/metal scrap. Keep e-waste devices segregated from cardboard and paper.',
+    streams: ['plastic', 'metal', 'e-waste devices', 'cardboard and paper', 'fabric', 'organic'],
+  },
+  {
+    id: '2',
+    name: 'saahas',
+    type: 'NGO',
+    address: '#21, Ground Floor, MCHS Colony, 5th C Cross, 16th Main, BTM Layout 2nd Stage / Kanjurmarg, Mumbai',
+    fullAddress: '#21, Ground Floor, MCHS Colony, 5th C Cross, 16th Main, BTM Layout 2nd Stage / Kanjurmarg, Mumbai',
+    latitude: 19.136,
+    longitude: 72.928,
+    phone: '080-41689889',
+    website: 'https://saahas.org',
+    facilityType: 'Community Material Recovery & Drop-off Hub',
+    timings: 'Monday - Saturday: 9:30 AM – 6:30 PM (Closed Sundays)',
+    guidelines: 'Clean, dry and segregated recyclables accepted. Separate hazardous electronic scrap from dry streams.',
+    streams: ['plastic', 'metal', 'glass', 'e-waste devices', 'cardboard and paper', 'fabric', 'furniture', 'organic', 'rubber', 'other'],
+  },
+];
 
 export default function NgoSearchScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [selectedDetailHub, setSelectedDetailHub] = useState(null);
+  const [hubs, setHubs] = useState(DEFAULT_HUBS);
+  const [loading, setLoading] = useState(true);
 
-  // Recovery hubs data with complete addresses and operational details
-  const [hubs] = useState([
-    {
-      id: '1',
-      name: 'greenciti',
-      type: 'NGO',
-      address: '19, Dreams Mall, Near Bhandup Railway Station, L.B.S. Marg, Bhandup West, Mumbai',
-      fullAddress: '19, Dreams Mall, Near Bhandup Railway Station, L.B.S. Marg, Bhandup West, Mumbai, Maharashtra 400078',
-      latitude: 19.148,
-      longitude: 72.936,
-      facilityType: 'Community Material Recovery & Drop-off Hub',
-      timings: 'Monday - Saturday: 9:30 AM – 6:00 PM (Closed Sundays)',
-      guidelines: 'Rinse and dry plastic/metal scrap. Keep e-waste devices segregated from cardboard and paper.',
-      streams: ['plastic', 'metal', 'e-waste devices', 'cardboard and paper', 'fabric', 'organic'],
-    },
-    {
-      id: '2',
-      name: 'saahas',
-      type: 'NGO',
-      address: '#21, Ground Floor, MCHS Colony, 5th C Cross, 16th Main, BTM Layout 2nd Stage / Kanjurmarg, Mumbai',
-      fullAddress: '#21, Ground Floor, MCHS Colony, 5th C Cross, 16th Main, BTM Layout 2nd Stage / Kanjurmarg, Mumbai',
-      latitude: 19.136,
-      longitude: 72.928,
-      facilityType: 'Community Material Recovery & Drop-off Hub',
-      timings: 'Monday - Saturday: 9:30 AM – 6:30 PM (Closed Sundays)',
-      guidelines: 'Clean, dry and segregated recyclables accepted. Separate hazardous electronic scrap from dry streams.',
-      streams: ['plastic', 'metal', 'glass', 'e-waste devices', 'cardboard and paper', 'fabric', 'furniture', 'organic', 'rubber', 'other'],
-    },
-  ]);
+  // Fetch markers data from Supabase table on mount
+  useEffect(() => {
+    fetchHubsFromSupabase();
+  }, []);
+
+  const fetchHubsFromSupabase = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.from('markers').select('*');
+
+      if (error) {
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        const formattedHubs = data.map((item, index) => {
+          let websiteUrl = item.website || '';
+          if (websiteUrl) {
+            websiteUrl = websiteUrl.replace(/,/g, '/').replace(/\/+/g, '/').replace('https:/', 'https://');
+          }
+          return {
+            id: item.id ? item.id.toString() : index.toString(),
+            name: item.name ? (item.name.charAt(0).toUpperCase() + item.name.slice(1)) : 'Recovery Hub',
+            type: item.type ? item.type.trim() : 'NGO',
+            address: item.address || '',
+            fullAddress: item.address || '',
+            phone: item.phone ? item.phone.toString().trim() : '',
+            website: websiteUrl,
+            latitude: item.latitude ? parseFloat(item.latitude) : 19.148,
+            longitude: item.longitude ? parseFloat(item.longitude) : 72.936,
+            timings: item.opening_hours && item.closing_hours
+              ? `Daily: ${item.opening_hours} – ${item.closing_hours}`
+              : 'Mon – Sat: 9:30 AM – 6:00 PM',
+            facilityType: 'Community Material Recovery & Drop-off Hub',
+            guidelines: 'Clean, dry and segregated recyclables accepted.',
+            streams: typeof item.type_of_trash === 'string'
+              ? item.type_of_trash.split(',').map(s => s.trim())
+              : ['general recyclable scrap'],
+          };
+        });
+        setHubs(formattedHubs);
+      }
+    } catch (error) {
+      console.warn('Error fetching recovery hubs from Supabase:', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // If navigated with focusHubId param, open its details
   useEffect(() => {
@@ -60,7 +116,7 @@ export default function NgoSearchScreen({ navigation, route }) {
         setSelectedDetailHub(found);
       }
     }
-  }, [route?.params?.focusHubId]);
+  }, [route?.params?.focusHubId, hubs]);
 
   const handleSearchSubmit = () => {
     const cleaned = searchQuery.replace(/;/g, '').trim();
@@ -125,7 +181,7 @@ export default function NgoSearchScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
 
-          {/* Available Centers Section Header */}
+          {/* Section Header */}
           <View style={styles.sectionMetaRow}>
             <Text style={styles.availableTitle}>Available Centers</Text>
             <View style={styles.countBadge}>
@@ -133,76 +189,102 @@ export default function NgoSearchScreen({ navigation, route }) {
             </View>
           </View>
 
-          {/* Hub List */}
-          <ScrollView
-            contentContainerStyle={[
-              styles.scrollContent,
-              { paddingBottom: Math.max(insets.bottom + 40, 80) },
-            ]}
-            showsVerticalScrollIndicator={false}
-          >
-            {filteredHubs.map((hub) => (
-              <View key={hub.id} style={styles.hubCard}>
-                <View style={styles.hubCardHeader}>
-                  <Text style={styles.hubName}>{hub.name}</Text>
-                  <View style={styles.ngoBadge}>
-                    <Text style={styles.ngoBadgeText}>{hub.type}</Text>
-                  </View>
+          {/* Content / Loader */}
+          {loading ? (
+            <View style={styles.loaderContainer}>
+              <ActivityIndicator size="large" color={colors.primary800} />
+              <Text style={styles.loaderText}>Loading hubs from Supabase...</Text>
+            </View>
+          ) : (
+            <ScrollView
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: Math.max(insets.bottom + 40, 80) },
+              ]}
+              showsVerticalScrollIndicator={false}
+            >
+              {filteredHubs.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No recovery hubs found matching your search.</Text>
                 </View>
-
-                <Text style={styles.hubAddress}>{hub.address}</Text>
-
-                <View style={styles.divider} />
-
-                <Text style={styles.streamsLabel}>Accepted Streams ({hub.streams.length}):</Text>
-                <View style={styles.streamsContainer}>
-                  {hub.streams.map((stream, idx) => (
-                    <View key={idx} style={styles.streamPill}>
-                      <Text style={styles.streamPillText}>{stream}</Text>
+              ) : (
+                filteredHubs.map((hub) => (
+                  <View key={hub.id} style={styles.hubCard}>
+                    <View style={styles.hubCardHeader}>
+                      <Text style={styles.hubName}>{hub.name}</Text>
+                      <View style={styles.ngoBadge}>
+                        <Text style={styles.ngoBadgeText}>{hub.type}</Text>
+                      </View>
                     </View>
-                  ))}
-                </View>
 
-                <View style={styles.divider} />
+                    <Text style={styles.hubAddress} numberOfLines={2}>{hub.address}</Text>
 
-                <View style={styles.hubCardFooter}>
-                  <TouchableOpacity
-                    style={styles.detailsBtn}
-                    onPress={() => setSelectedDetailHub(hub)}
-                  >
-                    <Ionicons name="information-circle-outline" size={14} color={colors.primary800} style={{ marginRight: 4 }} />
-                    <Text style={styles.detailsBtnText}>Show Details</Text>
-                  </TouchableOpacity>
+                    <View style={styles.divider} />
 
-                  <TouchableOpacity
-                    style={styles.mapBtn}
-                    onPress={() => {
-                      navigation.navigate('MapTab', {
-                        focusLocation: {
-                          id: `ngo-${hub.id}`,
-                          title: hub.name,
-                          address: hub.address,
-                          latitude: hub.latitude,
-                          longitude: hub.longitude,
-                        },
-                      });
-                    }}
-                  >
-                    <Ionicons name="map-outline" size={14} color={colors.primary800} style={{ marginRight: 4 }} />
-                    <Text style={styles.mapBtnText}>View on Map</Text>
-                  </TouchableOpacity>
+                    <Text style={styles.streamsLabel}>Accepted Streams ({hub.streams.length}):</Text>
+                    <View style={styles.streamsContainer}>
+                      {hub.streams.map((stream, idx) => (
+                        <View key={idx} style={styles.streamPill}>
+                          <Text style={styles.streamPillText}>{stream}</Text>
+                        </View>
+                      ))}
+                    </View>
 
-                  <TouchableOpacity
-                    style={styles.directionsBtn}
-                    onPress={() => handleDirections(hub.latitude, hub.longitude)}
-                  >
-                    <Ionicons name="navigate" size={14} color={colors.white} style={{ marginRight: 4 }} />
-                    <Text style={styles.directionsBtnText}>Directions</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
+                    <View style={styles.divider} />
+
+                    <View style={styles.hubCardFooter}>
+                      <TouchableOpacity
+                        style={styles.detailsBtn}
+                        onPress={() => setSelectedDetailHub(hub)}
+                      >
+                        <Ionicons name="information-circle-outline" size={14} color={colors.primary800} style={{ marginRight: 4 }} />
+                        <Text style={styles.detailsBtnText}>Details</Text>
+                      </TouchableOpacity>
+
+                      {hub.phone ? (
+                        <TouchableOpacity
+                          style={styles.callBtn}
+                          onPress={() => Linking.openURL(`tel:${hub.phone}`)}
+                        >
+                          <Ionicons name="call" size={14} color={colors.white} style={{ marginRight: 4 }} />
+                          <Text style={styles.callBtnText}>Call</Text>
+                        </TouchableOpacity>
+                      ) : null}
+
+                      <TouchableOpacity
+                        style={styles.mapBtn}
+                        onPress={() => {
+                          navigation.navigate('MainTabs', {
+                            screen: 'MapTab',
+                            params: {
+                              focusLocation: {
+                                id: `ngo-${hub.id}`,
+                                title: hub.name,
+                                address: hub.address,
+                                latitude: hub.latitude,
+                                longitude: hub.longitude,
+                              },
+                            },
+                          });
+                        }}
+                      >
+                        <Ionicons name="map-outline" size={14} color={colors.primary800} style={{ marginRight: 4 }} />
+                        <Text style={styles.mapBtnText}>Map</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.directionsBtn}
+                        onPress={() => handleDirections(hub.latitude, hub.longitude)}
+                      >
+                        <Ionicons name="navigate" size={14} color={colors.white} style={{ marginRight: 4 }} />
+                        <Text style={styles.directionsBtnText}>Directions</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          )}
         </View>
       </View>
 
@@ -247,55 +329,78 @@ export default function NgoSearchScreen({ navigation, route }) {
                   <Text style={styles.modalSectionContent}>{selectedDetailHub.timings}</Text>
                 </View>
 
+                {/* Contact Phone */}
+                {selectedDetailHub.phone ? (
+                  <View style={styles.modalSection}>
+                    <View style={styles.modalSectionTitleRow}>
+                      <Ionicons name="call" size={16} color={colors.primary800} style={{ marginRight: 6 }} />
+                      <Text style={styles.modalSectionTitle}>Contact Number</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => Linking.openURL(`tel:${selectedDetailHub.phone}`)}>
+                      <Text style={[styles.modalSectionContent, { color: colors.primary800, fontWeight: '700' }]}>
+                        {selectedDetailHub.phone} (Tap to Call)
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+
+                {/* Website */}
+                {selectedDetailHub.website ? (
+                  <View style={styles.modalSection}>
+                    <View style={styles.modalSectionTitleRow}>
+                      <Ionicons name="globe" size={16} color={colors.primary800} style={{ marginRight: 6 }} />
+                      <Text style={styles.modalSectionTitle}>Official Website</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => Linking.openURL(selectedDetailHub.website)}>
+                      <Text style={[styles.modalSectionContent, { color: colors.primary800, textDecorationLine: 'underline' }]}>
+                        {selectedDetailHub.website}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+
                 {/* Accepted Streams */}
                 <View style={styles.modalSection}>
                   <View style={styles.modalSectionTitleRow}>
-                    <Ionicons name="cube" size={16} color="#166534" style={{ marginRight: 6 }} />
-                    <Text style={styles.modalSectionTitle}>Accepted Materials ({selectedDetailHub.streams.length})</Text>
+                    <Ionicons name="leaf" size={16} color={colors.primary800} style={{ marginRight: 6 }} />
+                    <Text style={styles.modalSectionTitle}>Accepted Waste Streams ({selectedDetailHub.streams.length})</Text>
                   </View>
                   <View style={styles.modalStreamGrid}>
                     {selectedDetailHub.streams.map((stream, idx) => (
                       <View key={idx} style={styles.modalStreamPill}>
-                        <Ionicons name="checkmark-circle" size={12} color="#166534" style={{ marginRight: 4 }} />
+                        <Ionicons name="checkmark-circle" size={14} color="#166534" style={{ marginRight: 4 }} />
                         <Text style={styles.modalStreamText}>{stream}</Text>
                       </View>
                     ))}
                   </View>
                 </View>
-
-                {/* Guidelines */}
-                {selectedDetailHub.guidelines && (
-                  <View style={styles.modalSection}>
-                    <View style={styles.modalSectionTitleRow}>
-                      <Ionicons name="alert-circle" size={16} color={colors.primary800} style={{ marginRight: 6 }} />
-                      <Text style={styles.modalSectionTitle}>Drop-off Instructions</Text>
-                    </View>
-                    <Text style={styles.modalSectionContent}>{selectedDetailHub.guidelines}</Text>
-                  </View>
-                )}
               </ScrollView>
 
-              {/* Action Buttons */}
+              {/* Action Buttons in Modal */}
               <View style={styles.modalFooterActions}>
                 <TouchableOpacity
                   style={styles.modalDirectionsBtn}
                   onPress={() => handleDirections(selectedDetailHub.latitude, selectedDetailHub.longitude)}
                 >
-                  <Ionicons name="navigate" size={15} color={colors.white} style={{ marginRight: 6 }} />
-                  <Text style={styles.modalDirectionsBtnText}>Directions in Google Maps</Text>
+                  <Ionicons name="navigate" size={16} color={colors.white} style={{ marginRight: 6 }} />
+                  <Text style={styles.modalDirectionsBtnText}>Get Directions</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.modalMapBtn}
                   onPress={() => {
+                    const hub = selectedDetailHub;
                     setSelectedDetailHub(null);
-                    navigation.navigate('MapTab', {
-                      focusLocation: {
-                        id: `ngo-${selectedDetailHub.id}`,
-                        title: selectedDetailHub.name,
-                        address: selectedDetailHub.address,
-                        latitude: selectedDetailHub.latitude,
-                        longitude: selectedDetailHub.longitude,
+                    navigation.navigate('MainTabs', {
+                      screen: 'MapTab',
+                      params: {
+                        focusLocation: {
+                          id: `ngo-${hub.id}`,
+                          title: hub.name,
+                          address: hub.address,
+                          latitude: hub.latitude,
+                          longitude: hub.longitude,
+                        },
                       },
                     });
                   }}
@@ -357,16 +462,20 @@ const styles = StyleSheet.create({
   availableTitle: { fontSize: 16, fontWeight: '800', color: colors.primary800 },
   countBadge: { backgroundColor: colors.primary50, paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.full },
   countText: { fontSize: 11, fontWeight: '700', color: colors.primary800 },
+  loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  loaderText: { marginTop: 10, fontSize: 13, color: colors.textSecondary },
+  emptyContainer: { padding: 40, alignItems: 'center' },
+  emptyText: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: spacing.base, gap: spacing.sm },
   hubCard: {
-    backgroundColor: colors.cardBg || '#f4f8f4',
+    backgroundColor: '#f4f8f4',
     borderRadius: radius.xl,
     padding: spacing.base,
     borderWidth: 1,
     borderColor: colors.border,
   },
   hubCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  hubName: { fontSize: 18, fontWeight: '800', color: colors.primary800, textTransform: 'lowercase' },
+  hubName: { fontSize: 18, fontWeight: '800', color: colors.primary800, textTransform: 'capitalize' },
   ngoBadge: { backgroundColor: colors.primary800, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.xs },
   ngoBadgeText: { color: colors.white, fontSize: 10, fontWeight: '800' },
   hubAddress: { fontSize: 12, color: colors.textSecondary, marginTop: 4, lineHeight: 17 },
@@ -387,6 +496,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   detailsBtnText: { color: colors.primary800, fontSize: 11, fontWeight: '700' },
+  callBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16A34A',
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+  },
+  callBtnText: { color: colors.white, fontSize: 11, fontWeight: '700' },
   mapBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -407,7 +525,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   directionsBtnText: { color: colors.white, fontSize: 11, fontWeight: '700' },
-  // Modal styles
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.55)',
