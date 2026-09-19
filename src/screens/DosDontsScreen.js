@@ -5,12 +5,16 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { getCategoryEmoji } from '../services/categoryService';
 
 export default function DosDontsScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const isCompact = height < 720;
   const [activeTab, setActiveTab] = useState('dos'); // 'dos' | 'donts'
 
   const category = route?.params?.category || {
@@ -40,14 +44,14 @@ export default function DosDontsScreen({ navigation, route }) {
   const categoryEmoji = getCategoryEmoji(category);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeBgColor }]}>
-      <View style={[styles.container, { backgroundColor: themeBgColor }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeBgColor }]} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.container, { backgroundColor: themeBgColor, paddingBottom: Math.max(insets.bottom + 10, 18) }]}>
         {/* Top Bar with Back Button */}
         <View style={styles.topBar}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <Ionicons name="arrow-back" size={24} color="#1B1F1C" />
           </TouchableOpacity>
@@ -56,9 +60,15 @@ export default function DosDontsScreen({ navigation, route }) {
         </View>
 
         {/* Centered Hero Graphic with Status Icon */}
-        <View style={styles.heroGraphicContainer}>
-          <View style={[styles.illustrationCircle, { borderColor: themeAccentColor }]}>
-            <Text style={styles.heroEmojiText}>{categoryEmoji}</Text>
+        <View style={[styles.heroGraphicContainer, isCompact && { marginVertical: 6 }]}>
+          <View
+            style={[
+              styles.illustrationCircle,
+              { borderColor: themeAccentColor },
+              isCompact && { width: 92, height: 92, borderRadius: 46 },
+            ]}
+          >
+            <Text style={[styles.heroEmojiText, isCompact && { fontSize: 44 }]}>{categoryEmoji}</Text>
             <View
               style={[
                 styles.badgeOverlay,

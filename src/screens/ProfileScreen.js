@@ -10,13 +10,14 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import globalStyles, { colors, spacing, radius } from '../globalStyles';
 import showAlert from '../utils/alert';
 
 export default function ProfileScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { session, signOut } = useAuth();
   const userEmail = session?.user?.email || 'citizen@ecoshift.app';
   const initialName = session?.user?.user_metadata?.full_name || userEmail.split('@')[0] || 'Eco Citizen';
@@ -55,16 +56,30 @@ export default function ProfileScreen({ navigation }) {
         <View style={styles.maxContainer}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
               <Ionicons name="arrow-back" size={24} color={colors.primary800} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>My Profile</Text>
-            <TouchableOpacity onPress={() => setIsEditing(!isEditing)} style={styles.editToggleBtn}>
+            <TouchableOpacity
+              onPress={() => setIsEditing(!isEditing)}
+              style={styles.editToggleBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
               <Text style={styles.editToggleText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: Math.max(insets.bottom + 30, 48) },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Avatar & Badges */}
             <View style={styles.avatarCard}>
               <View style={styles.avatarCircle}>
@@ -226,7 +241,7 @@ export default function ProfileScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safeAreaOverride: { flex: 1, backgroundColor: '#ffffff' },
-  webWrapper: { flex: 1, alignItems: 'center', backgroundColor: '#f3f6f3' },
+  webWrapper: { flex: 1, alignItems: 'center', backgroundColor: Platform.OS === 'web' ? '#f3f6f3' : '#ffffff' },
   maxContainer: { flex: 1, width: '100%', maxWidth: 600, backgroundColor: '#ffffff' },
   header: {
     flexDirection: 'row',

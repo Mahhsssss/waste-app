@@ -4,13 +4,13 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import '../global.css';
@@ -20,6 +20,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase'; 
 
 export default function LoginScreen({ onNavigate }) {
+  const insets = useSafeAreaInsets();
   const { signIn, signInWithGoogle, signInAsGuest, resendConfirmation } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -169,13 +170,16 @@ export default function LoginScreen({ onNavigate }) {
   };
 
   return (
-    <SafeAreaView style={globalStyles.safeArea}>
+    <SafeAreaView style={globalStyles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={globalStyles.scrollContent}
+          contentContainerStyle={[
+            globalStyles.scrollContent,
+            { paddingBottom: Math.max(insets.bottom + 20, 36) },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -185,6 +189,7 @@ export default function LoginScreen({ onNavigate }) {
               <TouchableOpacity
                 style={globalStyles.backButton}
                 activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 onPress={() => onNavigate && onNavigate('Welcome')}
               >
                 <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />

@@ -3,14 +3,14 @@ import {
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import '../global.css';
 import globalStyles, { colors } from '../globalStyles';
 
 export default function PasswordChangedScreen({ onNavigate }) {
   return (
-    <SafeAreaView style={globalStyles.safeArea}>
+    <SafeAreaView style={globalStyles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
       <View style={globalStyles.passwordChangedContainer}>
         <View style={globalStyles.passwordChangedCenterSection}>
           <Text style={globalStyles.passwordChangedTitle}>Password changed</Text>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -31,14 +31,28 @@ const Tab = createBottomTabNavigator();
 const RootStack = createNativeStackNavigator();
 
 function MainAppTabs() {
+  const insets = useSafeAreaInsets();
+  const bottomInset = insets.bottom > 0 ? insets.bottom : 8;
+  const tabHeight = 60 + bottomInset;
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: tabHeight,
+            paddingBottom: bottomInset,
+            paddingTop: 8,
+          },
+        ],
         tabBarActiveTintColor: colors.white,
-        tabBarInactiveTintColor: colors.primary100,
+        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.65)',
+        tabBarItemStyle: {
+          paddingVertical: 4,
+        },
         tabBarIcon: ({ focused, color }) => {
           let iconName = 'home';
           if (route.name === 'HomeTab') iconName = focused ? 'home' : 'home-outline';
@@ -126,13 +140,16 @@ export default function App() {
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: colors.primary600,
-    height: 65,
     position: 'absolute',
     borderTopWidth: 0,
-    elevation: 4,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
   },
   scanButtonContainer: {
-    top: -15,
+    top: -16,
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -142,9 +159,9 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: colors.white,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 8,
   },
 });

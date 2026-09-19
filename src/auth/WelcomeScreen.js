@@ -3,10 +3,10 @@ import {
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import '../global.css';
 import globalStyles, { colors } from '../globalStyles';
@@ -15,6 +15,7 @@ import EcoLogo from '../components/EcoLogo';
 import { useAuth } from '../context/AuthContext';
 
 export default function WelcomeScreen({ onNavigate }) {
+  const insets = useSafeAreaInsets();
   const { signInWithGoogle, signInAsGuest } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
@@ -45,8 +46,8 @@ export default function WelcomeScreen({ onNavigate }) {
   };
 
   return (
-    <SafeAreaView style={globalStyles.safeArea}>
-      <View style={globalStyles.welcomeContainer}>
+    <SafeAreaView style={globalStyles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[globalStyles.welcomeContainer, { paddingBottom: Math.max(insets.bottom + 12, 20) }]}>
         {/* Main Content Card / Header */}
         <View style={globalStyles.welcomeTopSection}>
           <EcoLogo size={110} showTitle={true} />

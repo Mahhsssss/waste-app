@@ -4,13 +4,13 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import '../global.css';
 import globalStyles, { colors } from '../globalStyles';
@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import showAlert from '../utils/alert';
 
 export default function ForgotPasswordScreen({ onNavigate }) {
+  const insets = useSafeAreaInsets();
   const { sendPasswordReset } = useAuth();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -55,13 +56,16 @@ export default function ForgotPasswordScreen({ onNavigate }) {
   };
 
   return (
-    <SafeAreaView style={globalStyles.safeArea}>
+    <SafeAreaView style={globalStyles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={globalStyles.scrollContent}
+          contentContainerStyle={[
+            globalStyles.scrollContent,
+            { paddingBottom: Math.max(insets.bottom + 20, 36) },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -71,6 +75,7 @@ export default function ForgotPasswordScreen({ onNavigate }) {
               <TouchableOpacity
                 style={globalStyles.backButton}
                 activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 onPress={() => onNavigate && onNavigate('Login')}
               >
                 <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />

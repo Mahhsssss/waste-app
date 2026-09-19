@@ -12,13 +12,14 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import globalStyles, { colors, spacing, radius } from '../globalStyles';
 import { getReports, subscribeReports } from '../services/reportService';
 import { DEFAULT_RECOVERY_HUBS, fetchRecoveryHubs } from '../services/hubService';
 
 export default function MapScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const [reports, setReports] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('NGOs'); // 'NGOs' | 'My Reports' | 'Trash Dumps' | 'All'
   const [selectedMarker, setSelectedMarker] = useState(null);
@@ -710,7 +711,11 @@ export default function MapScreen({ navigation, route }) {
           </View>
 
           {/* Bottom Area: Detail Cards & Lists */}
-          <ScrollView style={styles.bottomArea} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.bottomArea}
+            contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 85, 110) }}
+            showsVerticalScrollIndicator={false}
+          >
             {/* 1. SELECTED MARKER DETAIL CARD */}
             {selectedMarker ? (
               <View style={styles.detailCard}>
@@ -989,7 +994,10 @@ export default function MapScreen({ navigation, route }) {
       {detailsModalItem && (
         <Modal visible={!!detailsModalItem} transparent animationType="slide">
           <View style={styles.modalBackdrop}>
-            <View style={styles.modalSheet}>
+            <View style={[styles.modalSheet, { paddingBottom: Math.max(insets.bottom + 16, 24) }]}>
+              {/* Native Bottom Sheet Drag Handle */}
+              <View style={styles.modalDragHandle} />
+
               {/* Modal Header */}
               <View style={styles.modalHeader}>
                 <View style={{ flex: 1 }}>
@@ -1174,7 +1182,7 @@ export default function MapScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safeAreaOverride: { flex: 1, backgroundColor: '#ffffff' },
-  webWrapper: { flex: 1, alignItems: 'center', backgroundColor: '#f3f6f3' },
+  webWrapper: { flex: 1, alignItems: 'center', backgroundColor: Platform.OS === 'web' ? '#f3f6f3' : '#ffffff' },
   maxContainer: { flex: 1, width: '100%', maxWidth: 600, backgroundColor: '#ffffff' },
   header: {
     flexDirection: 'row',
@@ -1298,7 +1306,7 @@ const styles = StyleSheet.create({
   zoomDivider: { width: 1, height: 14, backgroundColor: colors.border },
   mapContainer: {
     marginHorizontal: spacing.base,
-    height: 300,
+    height: 270,
     borderRadius: radius.xl,
     overflow: 'hidden',
     position: 'relative',
@@ -1549,14 +1557,22 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
+  modalDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
   modalSheet: {
     width: '100%',
     maxWidth: 600,
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: spacing.base,
-    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    paddingTop: 12,
     maxHeight: '85%',
   },
   modalHeader: {

@@ -11,7 +11,7 @@ import {
   Linking,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import globalStyles, { colors, spacing, radius } from '../globalStyles';
@@ -19,6 +19,7 @@ import showAlert from '../utils/alert';
 import { submitReport } from '../services/reportService';
 
 export default function ReportDumpScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const initialType = route?.params?.wasteType || 'Plastic Scrap & Polythene';
   const initialCategory = route?.params?.superCategory || 'plastic';
 
@@ -281,14 +282,24 @@ export default function ReportDumpScreen({ navigation, route }) {
         <View style={styles.maxContainer}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
               <Ionicons name="arrow-back" size={24} color={colors.primary800} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Report Trash Dump</Text>
             <View style={{ width: 40 }} />
           </View>
 
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: Math.max(insets.bottom + 30, 48) },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
             {/* 1. Photo Capture & Evidence Card */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>1. Garbage Pile Photo Evidence</Text>
@@ -505,7 +516,7 @@ export default function ReportDumpScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safeAreaOverride: { flex: 1, backgroundColor: '#ffffff' },
-  webWrapper: { flex: 1, alignItems: 'center', backgroundColor: '#f3f6f3' },
+  webWrapper: { flex: 1, alignItems: 'center', backgroundColor: Platform.OS === 'web' ? '#f3f6f3' : '#ffffff' },
   maxContainer: { flex: 1, width: '100%', maxWidth: 600, backgroundColor: '#ffffff' },
   header: {
     flexDirection: 'row',

@@ -135,7 +135,7 @@ export default function HistoryScreen({ navigation }) {
           <ScrollView
             contentContainerStyle={[
               styles.scrollContent,
-              { paddingBottom: Math.max(insets.bottom + 60, 100) },
+              { paddingBottom: Math.max(insets.bottom + 85, 110) },
             ]}
             showsVerticalScrollIndicator={false}
           >
@@ -189,7 +189,10 @@ export default function HistoryScreen({ navigation }) {
       {selectedItem && (
         <Modal visible={!!selectedItem} transparent animationType="slide">
           <View style={styles.modalBackdrop}>
-            <View style={styles.modalSheet}>
+            <View style={[styles.modalSheet, { paddingBottom: Math.max(insets.bottom + 20, 36) }]}>
+              {/* Native Bottom Sheet Drag Handle */}
+              <View style={styles.modalDragHandle} />
+
               <View style={styles.modalHeader}>
                 <View style={styles.modalTitleRow}>
                   <Text style={styles.modalEmoji}>{selectedItem.emoji}</Text>
@@ -245,7 +248,7 @@ export default function HistoryScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safeAreaOverride: { flex: 1, backgroundColor: '#ffffff' },
-  webWrapper: { flex: 1, alignItems: 'center', backgroundColor: '#f3f6f3' },
+  webWrapper: { flex: 1, alignItems: 'center', backgroundColor: Platform.OS === 'web' ? '#f3f6f3' : '#ffffff' },
   maxContainer: { flex: 1, width: '100%', maxWidth: 600, backgroundColor: '#ffffff' },
   header: {
     flexDirection: 'row',
@@ -365,12 +368,20 @@ const styles = StyleSheet.create({
   },
   scanMoreBtnText: { color: colors.white, fontSize: 14, fontWeight: '800' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
   modalSheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: spacing.lg,
-    paddingBottom: 40,
+    paddingTop: 12,
   },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   modalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },

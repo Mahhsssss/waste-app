@@ -164,7 +164,7 @@ export default function HomeScreen({ navigation }) {
             style={styles.scrollViewStyle}
             contentContainerStyle={[
               styles.scrollContentContainer,
-              { paddingBottom: 130 }, // Ensures last items scroll smoothly above the floating pill
+              { paddingBottom: 135 + (insets.bottom > 0 ? insets.bottom : 8) },
             ]}
             showsVerticalScrollIndicator={false}
           >
@@ -366,7 +366,13 @@ export default function HomeScreen({ navigation }) {
           </ScrollView>
 
           {/* Permanently Floating Pill Bar (Positioned Absolute to remain visible everywhere) */}
-          <View style={styles.floatingPillContainer} pointerEvents="box-none">
+          <View
+            style={[
+              styles.floatingPillContainer,
+              { bottom: 68 + (insets.bottom > 0 ? insets.bottom : 8) },
+            ]}
+            pointerEvents="box-none"
+          >
             <View style={styles.floatingPill}>
               <TouchableOpacity
                 style={[
@@ -429,7 +435,11 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <SafeAreaView style={styles.drawerSafeArea} edges={['top', 'bottom', 'left', 'right']}>
             <View style={[globalStyles.drawerHeader, styles.drawerHeaderCustom]}>
-              <TouchableOpacity onPress={() => setIsMenuOpen(false)}>
+              <TouchableOpacity
+                onPress={() => setIsMenuOpen(false)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={styles.drawerCloseBtn}
+              >
                 <Ionicons
                   name="chevron-back"
                   size={28}
@@ -531,7 +541,7 @@ const styles = StyleSheet.create({
   webWrapper: { 
     flex: 1, 
     alignItems: 'center', 
-    backgroundColor: '#f3f6f3',
+    backgroundColor: Platform.OS === 'web' ? '#f3f6f3' : '#ffffff',
     width: '100%',
     height: '100%',
   },
@@ -542,6 +552,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff', 
     position: 'relative',
     overflow: 'hidden', 
+  },
+  drawerCloseBtn: {
+    padding: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   topBar: {
     flexDirection: 'row',

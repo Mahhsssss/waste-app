@@ -5,9 +5,9 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   fetchCategoryByModelClass,
@@ -18,6 +18,7 @@ import {
 } from '../services/categoryService';
 
 export default function RecycleAdviceScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState(null);
 
@@ -74,7 +75,7 @@ export default function RecycleAdviceScreen({ navigation, route }) {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <Ionicons name="arrow-back" size={22} color="#1B1F1C" />
         </TouchableOpacity>
@@ -86,7 +87,10 @@ export default function RecycleAdviceScreen({ navigation, route }) {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom + 24, 40) },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Main Item Hero Card */}

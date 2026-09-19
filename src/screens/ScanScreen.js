@@ -11,7 +11,7 @@ import {
   FlatList,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +29,7 @@ import { addHistoryItem } from '../services/historyService';
 const API_URL = 'https://mahhsssss--waste-detection-detect.modal.run';
 
 export default function ScanScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -258,10 +259,17 @@ export default function ScanScreen({ navigation }) {
 
           {/* 2. All overlay UI elements positioned as siblings on top */}
           {/* Top Header Controls */}
-          <View style={styles.topControls} pointerEvents="box-none">
+          <View
+            style={[
+              styles.topControls,
+              { top: Math.max(insets.top, 16) + 8 },
+            ]}
+            pointerEvents="box-none"
+          >
             <TouchableOpacity
               style={styles.circleButton}
               onPress={() => navigation.goBack()}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
@@ -270,6 +278,7 @@ export default function ScanScreen({ navigation }) {
             <TouchableOpacity
               style={styles.testPickerButton}
               onPress={() => setShowTestPicker(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Ionicons name="list" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
               <Text style={styles.testPickerText}>All 59 Items</Text>
@@ -289,7 +298,13 @@ export default function ScanScreen({ navigation }) {
 
           {/* Detection Status Overlay */}
           {detection && (
-            <View style={styles.resultBox} pointerEvents="box-none">
+            <View
+              style={[
+                styles.resultBox,
+                { top: Math.max(insets.top, 16) + 68 },
+              ]}
+              pointerEvents="box-none"
+            >
               <Text style={styles.label}>
                 {detection.class !== 'Connection Error' && detection.class !== 'nothing' ? '🗑️ ' : '⚠️ '}
                 {detection.class ? String(detection.class).toUpperCase() : 'NO ITEM'}
@@ -303,7 +318,13 @@ export default function ScanScreen({ navigation }) {
           )}
 
           {/* Footer Multi-Option Dock (Live Frame Scan, Direct Camera Snap, Gallery Upload) */}
-          <View style={styles.footer} pointerEvents="box-none">
+          <View
+            style={[
+              styles.footer,
+              { bottom: 68 + (insets.bottom > 0 ? insets.bottom : 10) },
+            ]}
+            pointerEvents="box-none"
+          >
             <View style={styles.footerRow}>
               {/* Direct Camera App Snap */}
               <TouchableOpacity
@@ -352,7 +373,14 @@ export default function ScanScreen({ navigation }) {
         /* Permission / Alternate Scan Hub */
         <View style={[globalStyles.permissionContainer, { paddingHorizontal: 24, justifyContent: 'center' }]}>
           <TouchableOpacity
-            style={{ position: 'absolute', top: 50, left: 20, zIndex: 10, padding: 8 }}
+            style={{
+              position: 'absolute',
+              top: Math.max(insets.top, 16) + 8,
+              left: 20,
+              zIndex: 10,
+              padding: 8,
+            }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={() => navigation.goBack()}
           >
             <Ionicons name="arrow-back" size={26} color={colors.primary800} />
@@ -442,7 +470,10 @@ export default function ScanScreen({ navigation }) {
       {/* 59 Waste Categories Catalog Modal */}
       <Modal visible={showTestPicker} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <View style={[styles.modalContainer, { paddingBottom: Math.max(insets.bottom + 20, 35) }]}>
+            {/* Native Bottom Sheet Drag Handle */}
+            <View style={styles.modalDragHandle} />
+
             <View style={styles.modalHeader}>
               <View style={{ flex: 1, paddingRight: 8 }}>
                 <Text style={styles.modalTitle}>59 Waste Categories</Text>
@@ -692,12 +723,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'flex-end',
   },
+  modalDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
   modalContainer: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 12,
     paddingBottom: 35,
     maxHeight: '80%',
   },
@@ -720,7 +759,8 @@ const styles = StyleSheet.create({
   pickerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 13,
+    paddingVertical: 14,
+    minHeight: 48,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },

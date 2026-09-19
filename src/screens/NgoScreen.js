@@ -136,7 +136,7 @@ export default function NgoSearchScreen({ navigation, route }) {
             <ScrollView
               contentContainerStyle={[
                 styles.scrollContent,
-                { paddingBottom: Math.max(insets.bottom + 40, 80) },
+                { paddingBottom: Math.max(insets.bottom + 85, 110) },
               ]}
               showsVerticalScrollIndicator={false}
             >
@@ -229,7 +229,10 @@ export default function NgoSearchScreen({ navigation, route }) {
       {selectedDetailHub && (
         <Modal visible={!!selectedDetailHub} transparent animationType="slide">
           <View style={styles.modalBackdrop}>
-            <View style={styles.modalSheet}>
+            <View style={[styles.modalSheet, { paddingBottom: Math.max(insets.bottom + 16, 24) }]}>
+              {/* Native Bottom Sheet Drag Handle */}
+              <View style={styles.modalDragHandle} />
+
               {/* Header */}
               <View style={styles.modalHeader}>
                 <View style={{ flex: 1 }}>
@@ -356,7 +359,7 @@ export default function NgoSearchScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safeAreaOverride: { flex: 1, backgroundColor: '#ffffff' },
-  webWrapper: { flex: 1, alignItems: 'center', backgroundColor: '#f3f6f3' },
+  webWrapper: { flex: 1, alignItems: 'center', backgroundColor: Platform.OS === 'web' ? '#f3f6f3' : '#ffffff' },
   maxContainer: { flex: 1, width: '100%', maxWidth: 600, backgroundColor: '#ffffff', position: 'relative' },
   headerContainer: {
     paddingHorizontal: spacing.base,
@@ -468,14 +471,22 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
+  modalDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
   modalSheet: {
     width: '100%',
     maxWidth: 600,
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: spacing.base,
-    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    paddingTop: 12,
     maxHeight: '85%',
   },
   modalHeader: {
