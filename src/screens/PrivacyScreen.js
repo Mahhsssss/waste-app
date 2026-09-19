@@ -18,7 +18,7 @@ export default function PrivacyScreen({ navigation }) {
       title: 'Camera & Visual Data',
       icon: 'camera-outline',
       description:
-        'When you use the AI waste scanner or take a garbage dump photo, image frames are processed in real-time by the YOLO detection model to identify scrap categories. We do not store raw images of your private spaces.',
+        'When you use the waste scanner or take a garbage dump photo, image frames are processed in real-time by the YOLO detection model to identify scrap categories. We do not store raw images of your private spaces.',
     },
     {
       title: 'Location & Geographic Pinning',

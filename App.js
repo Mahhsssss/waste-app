@@ -67,16 +67,16 @@ function MainAppTabs() {
       <Tab.Screen name="HomeTab" component={HomeScreen} />
       <Tab.Screen name="NgoTab" component={NgoScreen} />
 
-      {/* Elevated Center Camera Button */}
+      {/* Center Camera / Scanner Button */}
       <Tab.Screen
         name="ScanTab"
         component={ScanScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <View style={styles.scanButtonContainer}>
+            <View style={[styles.scanButtonContainer, focused && styles.scanButtonContainerActive]}>
               <Ionicons
                 name={focused ? "camera" : "camera-outline"}
-                size={30}
+                size={24}
                 color={colors.white}
               />
             </View>
@@ -149,19 +149,19 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
   scanButtonContainer: {
-    top: -16,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.primary800,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: colors.white,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  scanButtonContainerActive: {
+    backgroundColor: '#14532D',
   },
 });

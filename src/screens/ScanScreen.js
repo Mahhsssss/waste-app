@@ -135,10 +135,10 @@ export default function ScanScreen({ navigation }) {
       setDetection({ class: 'Connection Error', confidence: 0 });
       const is500 = e?.message?.includes('500');
       showAlert(
-        is500 ? 'Backend Model Error (HTTP 500)' : 'AI Detection Notice',
+        is500 ? 'Backend Model Error (HTTP 500)' : 'Detection Notice',
         is500
-          ? 'The remote AI model on Modal encountered an internal server error while processing the image. You can check the Modal logs or select an item directly from our catalog below.'
-          : 'Could not connect to the remote YOLO AI model. You can select your scrap item directly from our catalog to get instant disposal instructions.',
+          ? 'The remote model on Modal encountered an internal server error while processing the image. You can check the Modal logs or select an item directly from our catalog below.'
+          : 'Could not connect to the remote classification model. You can select your scrap item directly from our catalog to get instant disposal instructions.',
         [
           { text: 'Browse 59 Categories', onPress: () => setShowTestPicker(true) },
           { text: 'Cancel', style: 'cancel' },
@@ -321,7 +321,7 @@ export default function ScanScreen({ navigation }) {
           <View
             style={[
               styles.footer,
-              { bottom: 68 + (insets.bottom > 0 ? insets.bottom : 10) },
+              { bottom: Math.max(insets.bottom + 75, 95) },
             ]}
             pointerEvents="box-none"
           >
@@ -371,7 +371,7 @@ export default function ScanScreen({ navigation }) {
         </>
       ) : (
         /* Permission / Alternate Scan Hub */
-        <View style={[globalStyles.permissionContainer, { paddingHorizontal: 24, justifyContent: 'center' }]}>
+        <View style={[styles.permissionContainer, { paddingBottom: Math.max(insets.bottom + 85, 110) }]}>
           <TouchableOpacity
             style={{
               position: 'absolute',
@@ -387,10 +387,10 @@ export default function ScanScreen({ navigation }) {
           </TouchableOpacity>
 
           <Ionicons name="camera-outline" size={64} color={colors.primary600} style={{ marginBottom: 14 }} />
-          <Text style={[globalStyles.permissionText, { fontSize: 18, fontWeight: '700', color: colors.primary800, marginBottom: 8 }]}>
+          <Text style={[styles.permissionTitle, { fontSize: 18, fontWeight: '700', color: colors.primary800, marginBottom: 8 }]}>
             Waste Scanner Camera
           </Text>
-          <Text style={[globalStyles.permissionText, { fontSize: 13, color: colors.textSecondary, marginBottom: 20 }]}>
+          <Text style={[styles.permissionSub, { fontSize: 13, color: colors.textSecondary, marginBottom: 20, textAlign: 'center' }]}>
             Allow camera access for live scanning, or choose one of the alternative options below to scan and classify waste:
           </Text>
 
@@ -463,7 +463,6 @@ export default function ScanScreen({ navigation }) {
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#FFFFFF" />
-          <Text style={styles.loadingOverlayText}>Analyzing waste with AI...</Text>
         </View>
       )}
 
@@ -804,5 +803,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1F2937',
     padding: 0,
+  },
+  permissionContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  permissionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primary800,
+    marginBottom: 8,
+  },
+  permissionSub: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

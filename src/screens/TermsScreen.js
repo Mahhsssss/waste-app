@@ -20,7 +20,7 @@ export default function TermsScreen({ navigation }) {
         'When reporting an illegal garbage pile or waste dump, you agree that the photos and coordinates submitted represent genuine civic conditions. Falsifying waste reports or submitting copyrighted or misleading imagery is strictly prohibited and may result in account termination.',
     },
     {
-      title: '2. Waste Classification AI Guidelines',
+      title: '2. Waste Classification Guidelines',
       content:
         'Our scrap classification model identifies 59 waste categories to suggest ideal disposal bins and recycling channels. While the model maintains high accuracy, classification suggestions do not supersede local municipal segregation bylaws. Hazardous materials must always be handled in compliance with local environmental safety statutes.',
     },

@@ -44,7 +44,7 @@ export default function AboutScreen({ navigation }) {
                 <Ionicons name="leaf" size={38} color={colors.white} />
               </View>
               <Text style={styles.appName}>EcoShift</Text>
-              <Text style={styles.appTagline}>Civic AI Waste Classification & Dump Reporting</Text>
+              <Text style={styles.appTagline}>Civic Waste Classification & Dump Reporting</Text>
               <View style={styles.versionBadge}>
                 <Text style={styles.versionText}>Version 2.4.0 (Production Build)</Text>
               </View>
@@ -54,7 +54,7 @@ export default function AboutScreen({ navigation }) {
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>Our Mission</Text>
               <Text style={styles.sectionBody}>
-                EcoShift empowers citizens to tackle municipal landfill crises through edge AI computer vision. By identifying 59 distinct scrap streams and providing actionable disposal routes, we divert recyclables from toxic combustion and empower municipal authorities with real-time illegal dump reporting.
+                EcoShift empowers citizens to tackle municipal landfill crises through edge computer vision. By identifying 59 distinct scrap streams and providing actionable disposal routes, we divert recyclables from toxic combustion and empower municipal authorities with real-time illegal dump reporting.
               </Text>
             </View>
 

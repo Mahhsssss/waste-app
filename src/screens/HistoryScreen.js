@@ -215,7 +215,7 @@ export default function HistoryScreen({ navigation }) {
                 </View>
                 <View style={styles.modalStatBox}>
                   <Text style={styles.modalStatLabel}>Confidence</Text>
-                  <Text style={styles.modalStatVal}>{((selectedItem.confidence || 0.9) * 100).toFixed(0)}% AI Match</Text>
+                  <Text style={styles.modalStatVal}>{((selectedItem.confidence || 0.9) * 100).toFixed(0)}% Match</Text>
                 </View>
               </View>
 
