@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import './src/global.css';
 import { StyleSheet, View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -14,6 +13,7 @@ import SplashScreen from './src/screens/SplashScreen';
 
 // Main Screens
 import HomeScreen from './src/screens/HomeScreen';
+//import LocationScreen from './src/screens/LocationScreen';
 import ScanScreen from './src/screens/ScanScreen';
 import NgoScreen from './src/screens/NgoScreen';
 import MapScreen from './src/screens/MapScreen';
@@ -83,8 +83,6 @@ function RootNavigator() {
   if (loading) {
     return null;
   }
-
-  // If user is authenticated, render tab navigator + dynamic civic stack
   if (session?.user) {
     return (
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
