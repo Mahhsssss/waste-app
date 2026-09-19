@@ -61,11 +61,46 @@ const INITIAL_REPORTS = [
   },
 ];
 
+import { ExpoSecureStoreAdapter } from './supabase.js';
+
+const STORAGE_KEY = 'waste_app_dump_reports_v2';
+
 let memoryReports = [...INITIAL_REPORTS];
 const listeners = new Set();
+let isInitialized = false;
+
+// Auto-load saved dump reports from persistent storage on startup
+const initStorage = async () => {
+  if (isInitialized) return;
+  try {
+    const raw = await ExpoSecureStoreAdapter.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        memoryReports = parsed;
+        notifyListeners();
+      }
+    }
+  } catch (err) {
+    console.warn('Could not load dump reports from storage:', err);
+  } finally {
+    isInitialized = true;
+  }
+};
+
+initStorage();
+
+const saveToStorage = async () => {
+  try {
+    await ExpoSecureStoreAdapter.setItem(STORAGE_KEY, JSON.stringify(memoryReports));
+  } catch (err) {
+    console.warn('Could not persist dump reports:', err);
+  }
+};
 
 export const subscribeReports = (listener) => {
   listeners.add(listener);
+  initStorage();
   return () => listeners.delete(listener);
 };
 
@@ -74,10 +109,12 @@ const notifyListeners = () => {
 };
 
 export const getReports = () => {
+  initStorage();
   return [...memoryReports];
 };
 
 export const getMyReports = () => {
+  initStorage();
   return memoryReports.filter((r) => r.isMyReport);
 };
 
@@ -105,5 +142,6 @@ export const submitReport = (report) => {
 
   memoryReports = [newReport, ...memoryReports];
   notifyListeners();
+  saveToStorage();
   return newReport;
 };

@@ -1,5 +1,7 @@
-// services/historyService.js
 import { getCategoryEmoji } from './categoryService.js';
+import { ExpoSecureStoreAdapter } from './supabase.js';
+
+const STORAGE_KEY = 'waste_app_scan_history_v2';
 
 // Default starter history items so user sees an active activity log
 const INITIAL_HISTORY = [
@@ -67,9 +69,40 @@ const INITIAL_HISTORY = [
 
 let memoryHistory = [...INITIAL_HISTORY];
 const listeners = new Set();
+let isInitialized = false;
+
+// Auto-load saved history from persistent storage on startup
+const initStorage = async () => {
+  if (isInitialized) return;
+  try {
+    const raw = await ExpoSecureStoreAdapter.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        memoryHistory = parsed;
+        notifyListeners();
+      }
+    }
+  } catch (err) {
+    console.warn('Could not load scan history from storage:', err);
+  } finally {
+    isInitialized = true;
+  }
+};
+
+initStorage();
+
+const saveToStorage = async () => {
+  try {
+    await ExpoSecureStoreAdapter.setItem(STORAGE_KEY, JSON.stringify(memoryHistory));
+  } catch (err) {
+    console.warn('Could not persist scan history:', err);
+  }
+};
 
 export const subscribeHistory = (listener) => {
   listeners.add(listener);
+  initStorage();
   return () => listeners.delete(listener);
 };
 
@@ -78,6 +111,7 @@ const notifyListeners = () => {
 };
 
 export const getHistory = () => {
+  initStorage();
   return [...memoryHistory];
 };
 
@@ -97,16 +131,19 @@ export const addHistoryItem = (item) => {
     status: item.status || 'Classified & Diverted',
     emoji: emoji,
     confidence: item.confidence || 0.90,
+    photoUri: item.photoUri || null,
   };
 
   memoryHistory = [newItem, ...memoryHistory];
   notifyListeners();
+  saveToStorage();
   return newItem;
 };
 
 export const clearHistory = () => {
   memoryHistory = [];
   notifyListeners();
+  saveToStorage();
 };
 
 export const getHistoryStats = () => {

@@ -116,6 +116,7 @@ export default function ScanScreen({ navigation }) {
           superCategory: category?.super_category,
           confidence: result.confidence || 0.92,
           points: 25,
+          photoUri: imageUri,
         });
         navigation.navigate('RecycleAdviceScreen', {
           category,
