@@ -95,7 +95,7 @@ export default function DosDontsScreen({ navigation, route }) {
               <TouchableOpacity
                 style={[
                   styles.toggleSegment,
-                  isDos && styles.toggleSegmentActiveDos,
+                  isDos ? styles.toggleSegmentActiveDos : styles.toggleSegmentInactiveDos,
                 ]}
                 onPress={() => setActiveTab('dos')}
                 activeOpacity={0.8}
@@ -103,7 +103,7 @@ export default function DosDontsScreen({ navigation, route }) {
                 <Text
                   style={[
                     styles.toggleText,
-                    isDos && styles.toggleTextActive,
+                    isDos ? styles.toggleTextActive : styles.toggleTextDosInactive,
                   ]}
                 >
                   DOs
@@ -113,7 +113,7 @@ export default function DosDontsScreen({ navigation, route }) {
               <TouchableOpacity
                 style={[
                   styles.toggleSegment,
-                  !isDos && styles.toggleSegmentActiveDonts,
+                  !isDos ? styles.toggleSegmentActiveDonts : styles.toggleSegmentInactiveDonts,
                 ]}
                 onPress={() => setActiveTab('donts')}
                 activeOpacity={0.8}
@@ -121,7 +121,7 @@ export default function DosDontsScreen({ navigation, route }) {
                 <Text
                   style={[
                     styles.toggleText,
-                    !isDos && styles.toggleTextActive,
+                    !isDos ? styles.toggleTextActive : styles.toggleTextDontsInactive,
                   ]}
                 >
                   DON'Ts
@@ -138,14 +138,14 @@ export default function DosDontsScreen({ navigation, route }) {
             {isDos ? (
               category.dos && category.dos.length > 0 ? (
                 category.dos.map((item, idx) => (
-                  <View key={idx} style={styles.itemRow}>
+                  <View key={idx} style={[styles.itemRow, styles.itemRowDos]}>
                     <Ionicons
                       name="checkmark-circle"
                       size={22}
                       color="#16A34A"
                       style={styles.iconMargin}
                     />
-                    <Text style={styles.itemText}>{item}</Text>
+                    <Text style={styles.itemTextDos}>{item}</Text>
                   </View>
                 ))
               ) : (
@@ -153,18 +153,18 @@ export default function DosDontsScreen({ navigation, route }) {
               )
             ) : category.donts && category.donts.length > 0 ? (
               category.donts.map((item, idx) => (
-                <View key={idx} style={styles.itemRow}>
+                <View key={idx} style={[styles.itemRow, styles.itemRowDonts]}>
                   <Ionicons
                     name="close-circle"
                     size={22}
                     color="#DC2626"
                     style={styles.iconMargin}
                   />
-                  <Text style={styles.itemText}>{item}</Text>
+                  <Text style={styles.itemTextDonts}>{item}</Text>
                 </View>
               ))
             ) : (
-              <Text style={styles.emptyText}>No specific DON'Ts listed.</Text>
+              <Text style={[styles.emptyText, { color: '#DC2626' }]}>No specific DON'Ts listed.</Text>
             )}
           </ScrollView>
 
@@ -335,8 +335,29 @@ const styles = StyleSheet.create({
   toggleSegmentActiveDos: {
     backgroundColor: '#16A34A',
   },
+  toggleSegmentInactiveDos: {
+    backgroundColor: 'transparent',
+  },
+  toggleTextDosInactive: {
+    color: '#16A34A',
+    fontWeight: '700',
+  },
   toggleSegmentActiveDonts: {
     backgroundColor: '#DC2626',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  toggleSegmentInactiveDonts: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  toggleTextDontsInactive: {
+    color: '#DC2626',
+    fontWeight: '700',
   },
   toggleText: {
     fontSize: 12.5,
@@ -355,17 +376,36 @@ const styles = StyleSheet.create({
   itemRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 14,
+    marginBottom: 10,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  itemRowDos: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#DCFCE7',
+  },
+  itemRowDonts: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
   },
   iconMargin: {
-    marginRight: 12,
+    marginRight: 10,
     marginTop: 1,
   },
-  itemText: {
+  itemTextDos: {
     flex: 1,
     fontSize: 14,
-    color: '#374151',
+    color: '#166534',
     lineHeight: 21,
+    fontWeight: '500',
+  },
+  itemTextDonts: {
+    flex: 1,
+    fontSize: 14,
+    color: '#991B1B',
+    lineHeight: 21,
+    fontWeight: '600',
   },
   emptyText: {
     fontSize: 14,
