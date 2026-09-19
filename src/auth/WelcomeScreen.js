@@ -15,8 +15,9 @@ import EcoLogo from '../components/EcoLogo';
 import { useAuth } from '../context/AuthContext';
 
 export default function WelcomeScreen({ onNavigate }) {
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, signInAsGuest } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -29,6 +30,17 @@ export default function WelcomeScreen({ onNavigate }) {
       Alert.alert('Error', err.message || 'Something went wrong');
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  const handleGuestSignIn = async () => {
+    try {
+      setGuestLoading(true);
+      await signInAsGuest('Citizen Explorer');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Could not enter as guest');
+    } finally {
+      setGuestLoading(false);
     }
   };
 
@@ -74,6 +86,37 @@ export default function WelcomeScreen({ onNavigate }) {
           >
             <Ionicons name="mail" size={20} color={colors.textPrimary} />
             <Text style={globalStyles.pillButtonText}>Continue with Email</Text>
+          </TouchableOpacity>
+
+          {/* Instant Guest / Demo Access */}
+          <TouchableOpacity
+            style={[
+              globalStyles.pillButton,
+              {
+                backgroundColor: '#ECFDF5',
+                borderColor: '#10B981',
+                borderWidth: 1.5,
+              },
+            ]}
+            activeOpacity={0.8}
+            disabled={guestLoading}
+            onPress={handleGuestSignIn}
+          >
+            {guestLoading ? (
+              <ActivityIndicator size="small" color={colors.primary600} />
+            ) : (
+              <>
+                <Ionicons name="sparkles" size={18} color="#059669" />
+                <Text
+                  style={[
+                    globalStyles.pillButtonText,
+                    { color: '#047857', fontWeight: '700' },
+                  ]}
+                >
+                  Explore as Guest (Instant Demo)
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
 

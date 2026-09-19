@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import '../global.css';
 import globalStyles, { colors } from '../globalStyles';
 import { useAuth } from '../context/AuthContext';
+import showAlert from '../utils/alert';
 
 export default function ForgotPasswordScreen({ onNavigate }) {
   const { sendPasswordReset } = useAuth();
@@ -25,7 +26,7 @@ export default function ForgotPasswordScreen({ onNavigate }) {
 
   const handleSendLink = async () => {
     if (!email.trim() || !isEmailValid) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      showAlert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
 
@@ -33,9 +34,9 @@ export default function ForgotPasswordScreen({ onNavigate }) {
       setLoading(true);
       const { error } = await sendPasswordReset(email);
       if (error) {
-        Alert.alert('Request Failed', error);
+        showAlert('Request Failed', error);
       } else {
-        Alert.alert(
+        showAlert(
           'Email Sent',
           'Instructions to reset your password have been sent to your email.',
           [
@@ -47,7 +48,7 @@ export default function ForgotPasswordScreen({ onNavigate }) {
         );
       }
     } catch (err) {
-      Alert.alert('Error', err.message || 'Something went wrong');
+      showAlert('Error', err.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }

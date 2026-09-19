@@ -20,14 +20,16 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase'; 
 
 export default function LoginScreen({ onNavigate }) {
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, signInAsGuest, resendConfirmation } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [errorType, setErrorType] = useState('error');
 
   // 1. Listen for Supabase session changes & automatic redirect to Home
   useEffect(() => {
@@ -68,43 +70,99 @@ export default function LoginScreen({ onNavigate }) {
   const isEmailValid = email.includes('@') && email.includes('.');
 
   const handleLogin = async () => {
-  if (!email.trim() || !password) {
-    Alert.alert('Required Fields', 'Please enter both your email and password.');
-    return;
-  }
-
-  try {
-    setLoading(true);
-    const { data, error } = await signIn(email, password);
-
-    if (error) {
-      Alert.alert('Login Failed', typeof error === 'string' ? error : error.message || 'Invalid credentials.');
-    } else {
-      Alert.alert('Welcome Back!', 'You have logged in successfully.', [
-        {
-          text: 'OK',
-          onPress: () => {
-            if (onNavigate) onNavigate('HomeScreen');
-          },
-        },
-      ]);
+    setErrorMessage('');
+    if (!email.trim() || !password) {
+      setErrorType('error');
+      setErrorMessage('Please enter both your email address and password.');
+      return;
     }
-  } catch (err) {
-    Alert.alert('Error', err.message || 'Something went wrong');
-  } finally {
-    setLoading(false);
-  }
-};
+
+    try {
+      setLoading(true);
+      const res = await signIn(email, password);
+
+      if (res.error) {
+        const errMsg = typeof res.error === 'string' ? res.error : res.error.message || '';
+        const isEmailNotConfirmed = 
+          res.errorCode === 'email_not_confirmed' || 
+          errMsg.toLowerCase().includes('email not confirmed');
+
+        if (isEmailNotConfirmed) {
+          setErrorType('warning');
+          setErrorMessage(
+            'Your account was created, but Supabase requires your email to be verified. You can resend the link or enter immediately as a Citizen below.'
+          );
+        } else if (res.errorCode === 'invalid_credentials' || errMsg.toLowerCase().includes('invalid login credentials')) {
+          setErrorType('error');
+          setErrorMessage(
+            'Invalid email or password. You can use 1-Tap Instant Login below if you do not have an account.'
+          );
+        } else {
+          setErrorType('error');
+          setErrorMessage(errMsg || 'Login failed. Please check your credentials.');
+        }
+      } else {
+        // Successful login
+        setErrorMessage('');
+        if (onNavigate) {
+          onNavigate('HomeScreen');
+        }
+      }
+    } catch (err) {
+      setErrorType('error');
+      setErrorMessage(err.message || 'Something went wrong during login.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!email.trim()) {
+      setErrorMessage('Please enter your email to resend verification.');
+      setErrorType('error');
+      return;
+    }
+    try {
+      const { error: resendErr } = await resendConfirmation(email);
+      if (resendErr) {
+        setErrorMessage(`Resend Notice: ${resendErr}`);
+        setErrorType('error');
+      } else {
+        setErrorMessage(`A new verification link has been sent to ${email}. Please check your inbox and spam folder.`);
+        setErrorType('success');
+      }
+    } catch (e) {
+      setErrorMessage(e.message || 'Could not resend email.');
+      setErrorType('error');
+    }
+  };
+
+  const handleGuestSignIn = async () => {
+    try {
+      setGuestLoading(true);
+      await signInAsGuest('Citizen Explorer');
+      if (onNavigate) {
+        onNavigate('HomeScreen');
+      }
+    } catch (err) {
+      setErrorType('error');
+      setErrorMessage(err.message || 'Could not log in as guest.');
+    } finally {
+      setGuestLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     try {
       setGoogleLoading(true);
       const { error } = await signInWithGoogle();
       if (error) {
-        Alert.alert('Google Sign-In', error);
+        setErrorMessage(typeof error === 'string' ? error : error.message || 'Google sign in failed');
+        setErrorType('error');
       }
     } catch (err) {
-      Alert.alert('Error', err.message || 'Something went wrong');
+      setErrorMessage(err.message || 'Something went wrong with Google sign-in');
+      setErrorType('error');
     } finally {
       setGoogleLoading(false);
     }
@@ -139,6 +197,114 @@ export default function LoginScreen({ onNavigate }) {
               <Text style={{ fontSize: 26 }}>👋</Text>
             </View>
             <View style={{ height: 18 }} />
+
+            {/* Dynamic Status / Error Feedback Banner */}
+            {errorMessage ? (
+              <View
+                style={{
+                  backgroundColor:
+                    errorType === 'warning'
+                      ? '#FFFBEB'
+                      : errorType === 'success'
+                      ? '#ECFDF5'
+                      : '#FEF2F2',
+                  borderColor:
+                    errorType === 'warning'
+                      ? '#FCD34D'
+                      : errorType === 'success'
+                      ? '#A7F3D0'
+                      : '#FCA5A5',
+                  borderWidth: 1.5,
+                  borderRadius: 14,
+                  padding: 14,
+                  marginBottom: 18,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                  <Ionicons
+                    name={
+                      errorType === 'warning'
+                        ? 'alert-circle'
+                        : errorType === 'success'
+                        ? 'checkmark-circle'
+                        : 'close-circle'
+                    }
+                    size={20}
+                    color={
+                      errorType === 'warning'
+                        ? '#D97706'
+                        : errorType === 'success'
+                        ? '#059669'
+                        : '#DC2626'
+                    }
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: '800',
+                      color:
+                        errorType === 'warning'
+                          ? '#92400E'
+                          : errorType === 'success'
+                          ? '#065F46'
+                          : '#991B1B',
+                    }}
+                  >
+                    {errorType === 'warning'
+                      ? 'Email Verification Required'
+                      : errorType === 'success'
+                      ? 'Link Sent Successfully'
+                      : 'Login Notice'}
+                  </Text>
+                </View>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    color:
+                      errorType === 'warning'
+                        ? '#78350F'
+                        : errorType === 'success'
+                        ? '#047857'
+                        : '#7F1D1D',
+                    lineHeight: 18,
+                  }}
+                >
+                  {errorMessage}
+                </Text>
+
+                {errorType === 'warning' && (
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: '#D97706',
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                      }}
+                      onPress={handleResend}
+                    >
+                      <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}>
+                        Resend Link
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: '#059669',
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                      }}
+                      onPress={handleGuestSignIn}
+                    >
+                      <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}>
+                        Enter as Citizen
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            ) : null}
 
             {/* Email Field */}
             <View style={globalStyles.formGroup}>
@@ -188,26 +354,8 @@ export default function LoginScreen({ onNavigate }) {
               </View>
             </View>
 
-            {/* Remember Me + Forgot Password Row */}
-            <View style={globalStyles.optionsRow}>
-              <TouchableOpacity
-                style={globalStyles.rememberMeContainer}
-                activeOpacity={0.8}
-                onPress={() => setRememberMe(!rememberMe)}
-              >
-                <View
-                  style={[
-                    globalStyles.checkboxCircle,
-                    rememberMe && globalStyles.checkboxCircleActive,
-                  ]}
-                >
-                  {rememberMe && (
-                    <Ionicons name="checkmark" size={14} color={colors.white} />
-                  )}
-                </View>
-                <Text style={globalStyles.rememberMeText}>Remember me</Text>
-              </TouchableOpacity>
-
+            {/* Forgot Password Link */}
+            <View style={{ alignItems: 'flex-end', marginTop: 4, marginBottom: 16 }}>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => onNavigate && onNavigate('ForgotPassword')}
@@ -231,7 +379,37 @@ export default function LoginScreen({ onNavigate }) {
               ) : (
                 <Text style={globalStyles.primaryButtonText}>Log in</Text>
               )}
-          </TouchableOpacity>
+            </TouchableOpacity>
+
+            {/* 1-Tap Instant Demo Login Button */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#ECFDF5',
+                borderColor: '#10B981',
+                borderWidth: 1.5,
+                borderRadius: 14,
+                paddingVertical: 13,
+                paddingHorizontal: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: 10,
+              }}
+              activeOpacity={0.8}
+              disabled={guestLoading}
+              onPress={handleGuestSignIn}
+            >
+              {guestLoading ? (
+                <ActivityIndicator size="small" color="#059669" />
+              ) : (
+                <>
+                  <Ionicons name="flash" size={18} color="#059669" style={{ marginRight: 8 }} />
+                  <Text style={{ color: '#047857', fontSize: 14, fontWeight: '800' }}>
+                    1-Tap Instant Login (Citizen Demo)
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
 
             {/* Divider */}
             <View style={globalStyles.dividerContainer}>
@@ -253,6 +431,38 @@ export default function LoginScreen({ onNavigate }) {
                 <>
                   <GoogleIcon size={20} />
                   <Text style={globalStyles.socialButtonCardText}>Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Instant Demo Access / Continue as Guest */}
+            <TouchableOpacity
+              style={[
+                globalStyles.socialButtonCard,
+                {
+                  marginTop: 12,
+                  backgroundColor: '#ECFDF5',
+                  borderColor: '#10B981',
+                  borderWidth: 1.5,
+                },
+              ]}
+              disabled={guestLoading}
+              activeOpacity={0.8}
+              onPress={handleGuestSignIn}
+            >
+              {guestLoading ? (
+                <ActivityIndicator size="small" color={colors.primary600} />
+              ) : (
+                <>
+                  <Ionicons name="sparkles" size={20} color="#059669" />
+                  <Text
+                    style={[
+                      globalStyles.socialButtonCardText,
+                      { color: '#047857', fontWeight: '700' },
+                    ]}
+                  >
+                    Continue as Guest (Instant Access)
+                  </Text>
                 </>
               )}
             </TouchableOpacity>

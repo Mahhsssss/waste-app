@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import '../global.css';
 import globalStyles, { colors } from '../globalStyles';
 import { useAuth } from '../context/AuthContext';
+import showAlert from '../utils/alert';
 
 export default function ResetPasswordScreen({ onNavigate }) {
   const { updatePassword } = useAuth();
@@ -27,11 +28,11 @@ export default function ResetPasswordScreen({ onNavigate }) {
 
   const handleResetPassword = async () => {
     if (!newPassword || newPassword.length < 6) {
-      Alert.alert('Weak Password', 'New password must be at least 6 characters.');
+      showAlert('Weak Password', 'New password must be at least 6 characters.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Mismatch', 'Passwords do not match.');
+      showAlert('Mismatch', 'Passwords do not match.');
       return;
     }
 
@@ -39,14 +40,14 @@ export default function ResetPasswordScreen({ onNavigate }) {
       setLoading(true);
       const { error } = await updatePassword(newPassword);
       if (error) {
-        Alert.alert('Reset Failed', error);
+        showAlert('Reset Failed', error);
       } else {
         if (onNavigate) {
           onNavigate('PasswordChanged');
         }
       }
     } catch (err) {
-      Alert.alert('Error', err.message || 'Something went wrong');
+      showAlert('Error', err.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }

@@ -80,4 +80,5 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+export { ExpoSecureStoreAdapter };
 export default supabase;

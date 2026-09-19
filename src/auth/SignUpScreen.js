@@ -18,57 +18,77 @@ import GoogleIcon from '../components/GoogleIcon';
 import { useAuth } from '../context/AuthContext';
 
 export default function SignUpScreen({ onNavigate }) {
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signUp, signInWithGoogle, signInAsGuest } = useAuth();
 
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [errorType, setErrorType] = useState('error');
 
   const handleSignUp = async () => {
+    setErrorMessage('');
     if (!email.trim() || !password) {
-      Alert.alert('Required Fields', 'Please enter your email and password.');
+      setErrorType('error');
+      setErrorMessage('Please enter both your email and password.');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Weak Password', 'Password must be at least 6 characters.');
-      return;
-    }
-    if (confirmPassword && password !== confirmPassword) {
-      Alert.alert('Password Mismatch', 'Passwords do not match.');
-      return;
-    }
-    if (!acceptTerms) {
-      Alert.alert('Terms & Privacy', 'Please accept the terms and privacy policy.');
+      setErrorType('error');
+      setErrorMessage('Password must be at least 6 characters.');
       return;
     }
 
+    const autoUsername = email.split('@')[0] || 'Eco Citizen';
+
     try {
       setLoading(true);
-      const { data, error } = await signUp(email, password, username);
-      if (error) {
-        Alert.alert('Sign Up Failed', error);
+      const res = await signUp(email, password, autoUsername);
+      if (res.error) {
+        const errMsg = typeof res.error === 'string' ? res.error : res.error.message || '';
+        const isRateLimited = 
+          res.errorCode === 'over_email_send_rate_limit' || 
+          errMsg.toLowerCase().includes('rate limit');
+
+        if (isRateLimited) {
+          setErrorType('warning');
+          setErrorMessage(
+            'Supabase email rate limit reached on the free tier. Tap below to enter directly as a Citizen with all features unlocked!'
+          );
+        } else if (errMsg.toLowerCase().includes('already registered')) {
+          setErrorType('warning');
+          setErrorMessage(
+            'This email is already registered. You can log in with your password, or enter as Citizen below.'
+          );
+        } else {
+          setErrorType('error');
+          setErrorMessage(errMsg || 'Registration failed. Please try again.');
+        }
       } else {
-        Alert.alert(
-          'Account Created',
-          'Your account has been created successfully! Please check your email for verification.',
-          [
-            {
-              text: 'OK',
-              onPress: () => onNavigate && onNavigate('Login'),
-            },
-          ]
+        setErrorType('success');
+        setErrorMessage(
+          `Your account has been created! A verification link was sent to ${email}. You can also enter immediately as a Citizen below.`
         );
       }
     } catch (err) {
-      Alert.alert('Error', err.message || 'Something went wrong');
+      setErrorType('error');
+      setErrorMessage(err.message || 'Something went wrong');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGuestSignIn = async () => {
+    try {
+      setGuestLoading(true);
+      await signInAsGuest(username || 'Eco Citizen');
+    } catch (err) {
+      Alert.alert('Guest Login Error', err.message || 'Could not sign in as guest');
+    } finally {
+      setGuestLoading(false);
     }
   };
 
@@ -113,20 +133,113 @@ export default function SignUpScreen({ onNavigate }) {
             <Text style={globalStyles.title}>Create account</Text>
             <View style={{ height: 16 }} />
 
-            {/* Username Field */}
-            <View style={globalStyles.formGroup}>
-              <Text style={globalStyles.label}>Username</Text>
-              <View style={globalStyles.inputContainer}>
-                <TextInput
-                  style={globalStyles.input}
-                  placeholder="Your username"
-                  placeholderTextColor={colors.placeholder}
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                />
+            {/* Dynamic Status / Error Feedback Banner */}
+            {errorMessage ? (
+              <View
+                style={{
+                  backgroundColor:
+                    errorType === 'warning'
+                      ? '#FFFBEB'
+                      : errorType === 'success'
+                      ? '#ECFDF5'
+                      : '#FEF2F2',
+                  borderColor:
+                    errorType === 'warning'
+                      ? '#FCD34D'
+                      : errorType === 'success'
+                      ? '#A7F3D0'
+                      : '#FCA5A5',
+                  borderWidth: 1.5,
+                  borderRadius: 14,
+                  padding: 14,
+                  marginBottom: 18,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                  <Ionicons
+                    name={
+                      errorType === 'warning'
+                        ? 'alert-circle'
+                        : errorType === 'success'
+                        ? 'checkmark-circle'
+                        : 'close-circle'
+                    }
+                    size={20}
+                    color={
+                      errorType === 'warning'
+                        ? '#D97706'
+                        : errorType === 'success'
+                        ? '#059669'
+                        : '#DC2626'
+                    }
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: '800',
+                      color:
+                        errorType === 'warning'
+                          ? '#92400E'
+                          : errorType === 'success'
+                          ? '#065F46'
+                          : '#991B1B',
+                    }}
+                  >
+                    {errorType === 'warning'
+                      ? 'Notice'
+                      : errorType === 'success'
+                      ? 'Account Registered!'
+                      : 'Sign Up Error'}
+                  </Text>
+                </View>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    color:
+                      errorType === 'warning'
+                        ? '#78350F'
+                        : errorType === 'success'
+                        ? '#047857'
+                        : '#7F1D1D',
+                    lineHeight: 18,
+                  }}
+                >
+                  {errorMessage}
+                </Text>
+
+                {(errorType === 'warning' || errorType === 'success') && (
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: '#059669',
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                      }}
+                      onPress={handleGuestSignIn}
+                    >
+                      <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}>
+                        Enter Directly as Citizen
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: '#2563EB',
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                      }}
+                      onPress={() => onNavigate && onNavigate('Login')}
+                    >
+                      <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}>
+                        Go to Login
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
-            </View>
+            ) : null}
 
             {/* Email Field */}
             <View style={globalStyles.formGroup}>
@@ -150,7 +263,7 @@ export default function SignUpScreen({ onNavigate }) {
               <View style={globalStyles.inputContainer}>
                 <TextInput
                   style={globalStyles.input}
-                  placeholder="must be 8 characters"
+                  placeholder="At least 6 characters"
                   placeholderTextColor={colors.placeholder}
                   value={password}
                   onChangeText={setPassword}
@@ -171,53 +284,25 @@ export default function SignUpScreen({ onNavigate }) {
               </View>
             </View>
 
-            {/* Confirm Password Field */}
-            <View style={globalStyles.formGroup}>
-              <Text style={globalStyles.label}>Confirm password</Text>
-              <View style={globalStyles.inputContainer}>
-                <TextInput
-                  style={globalStyles.input}
-                  placeholder="repeat password"
-                  placeholderTextColor={colors.placeholder}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showConfirmPassword}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity
-                  style={globalStyles.inputRightIcon}
-                  activeOpacity={0.7}
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            {/* Terms and Privacy Notice */}
+            <View style={{ marginTop: 2, marginBottom: 16 }}>
+              <Text style={{ fontSize: 12, color: colors.textSecondary, textAlign: 'center', lineHeight: 17 }}>
+                By signing up, you agree to our{' '}
+                <Text 
+                  style={{ color: colors.primary600, fontWeight: '700' }}
+                  onPress={() => onNavigate && onNavigate('Terms')}
                 >
-                  <Ionicons
-                    name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
-                    size={20}
-                    color={colors.placeholder}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Accept Terms Checkbox */}
-            <TouchableOpacity
-              style={globalStyles.checkboxRow}
-              activeOpacity={0.8}
-              onPress={() => setAcceptTerms(!acceptTerms)}
-            >
-              <View
-                style={[
-                  globalStyles.checkboxCircle,
-                  acceptTerms && globalStyles.checkboxCircleActive,
-                ]}
-              >
-                {acceptTerms && (
-                  <Ionicons name="checkmark" size={14} color={colors.white} />
-                )}
-              </View>
-              <Text style={globalStyles.checkboxLabel}>
-                I accept the terms and privacy policy
+                  Terms
+                </Text>
+                {' '}and{' '}
+                <Text 
+                  style={{ color: colors.primary600, fontWeight: '700' }}
+                  onPress={() => onNavigate && onNavigate('Privacy')}
+                >
+                  Privacy Policy
+                </Text>.
               </Text>
-            </TouchableOpacity>
+            </View>
 
             {/* Sign Up CTA Button */}
             <TouchableOpacity
@@ -232,7 +317,7 @@ export default function SignUpScreen({ onNavigate }) {
               {loading ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
-                <Text style={globalStyles.primaryButtonText}>Sign up</Text>
+                <Text style={globalStyles.primaryButtonText}>Create Account</Text>
               )}
             </TouchableOpacity>
 
@@ -256,6 +341,38 @@ export default function SignUpScreen({ onNavigate }) {
                 <>
                   <GoogleIcon size={20} />
                   <Text style={globalStyles.socialButtonCardText}>Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Instant Demo Access / Continue as Guest */}
+            <TouchableOpacity
+              style={[
+                globalStyles.socialButtonCard,
+                {
+                  marginTop: 12,
+                  backgroundColor: '#ECFDF5',
+                  borderColor: '#10B981',
+                  borderWidth: 1.5,
+                },
+              ]}
+              disabled={guestLoading}
+              activeOpacity={0.8}
+              onPress={handleGuestSignIn}
+            >
+              {guestLoading ? (
+                <ActivityIndicator size="small" color={colors.primary600} />
+              ) : (
+                <>
+                  <Ionicons name="sparkles" size={20} color="#059669" />
+                  <Text
+                    style={[
+                      globalStyles.socialButtonCardText,
+                      { color: '#047857', fontWeight: '700' },
+                    ]}
+                  >
+                    Continue as Guest (Instant Demo)
+                  </Text>
                 </>
               )}
             </TouchableOpacity>

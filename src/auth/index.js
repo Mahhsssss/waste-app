@@ -19,6 +19,7 @@ export default function AuthNavigator({ initialScreen = 'Welcome' }) {
   switch (currentScreen) {
     case 'Welcome':
       return <WelcomeScreen onNavigate={handleNavigate} />;
+    case 'SignUp':
     case 'Signup':
       return <SignUpScreen onNavigate={handleNavigate} />;
     case 'Login':

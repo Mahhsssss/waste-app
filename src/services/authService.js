@@ -16,14 +16,19 @@ export async function signUpWithEmail(email, password, username = '') {
       options: {
         data: {
           username: username.trim(),
+          full_name: username.trim(),
         },
       },
     });
 
     if (error) throw error;
-    return { data, error: null };
+    return { data, error: null, errorCode: null };
   } catch (error) {
-    return { data: null, error: error.message || 'Failed to sign up' };
+    return { 
+      data: null, 
+      error: error.message || 'Failed to sign up',
+      errorCode: error.code || (error.message?.toLowerCase().includes('rate limit') ? 'over_email_send_rate_limit' : null)
+    };
   }
 }
 
@@ -38,9 +43,37 @@ export async function signInWithEmail(email, password) {
     });
 
     if (error) throw error;
+    return { data, error: null, errorCode: null };
+  } catch (error) {
+    const isEmailNotConfirmed = 
+      error.code === 'email_not_confirmed' || 
+      error.message?.toLowerCase().includes('email not confirmed');
+
+    return { 
+      data: null, 
+      error: error.message || 'Failed to log in',
+      errorCode: isEmailNotConfirmed ? 'email_not_confirmed' : (error.code || null)
+    };
+  }
+}
+
+/**
+ * Resend Email Confirmation Link
+ */
+export async function resendConfirmationEmail(email) {
+  try {
+    const { data, error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+    });
+    if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    return { data: null, error: error.message || 'Failed to log in' };
+    return { 
+      data: null, 
+      error: error.message || 'Failed to resend confirmation email',
+      errorCode: error.code || null 
+    };
   }
 }
 
