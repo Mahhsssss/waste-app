@@ -14,48 +14,15 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import globalStyles, { colors, spacing, radius } from '../globalStyles';
-import { supabase } from '../services/supabase';
-
-const DEFAULT_HUBS = [
-  {
-    id: '1',
-    name: 'greenciti',
-    type: 'NGO',
-    address: '19, Dreams Mall, Near Bhandup Railway Station, L.B.S. Marg, Bhandup West, Mumbai',
-    fullAddress: '19, Dreams Mall, Near Bhandup Railway Station, L.B.S. Marg, Bhandup West, Mumbai, Maharashtra 400078',
-    latitude: 19.148,
-    longitude: 72.936,
-    phone: '8097479747',
-    website: 'https://www.greenciti.org',
-    facilityType: 'Community Material Recovery & Drop-off Hub',
-    timings: 'Monday - Saturday: 9:30 AM – 6:00 PM (Closed Sundays)',
-    guidelines: 'Rinse and dry plastic/metal scrap. Keep e-waste devices segregated from cardboard and paper.',
-    streams: ['plastic', 'metal', 'e-waste devices', 'cardboard and paper', 'fabric', 'organic'],
-  },
-  {
-    id: '2',
-    name: 'saahas',
-    type: 'NGO',
-    address: '#21, Ground Floor, MCHS Colony, 5th C Cross, 16th Main, BTM Layout 2nd Stage / Kanjurmarg, Mumbai',
-    fullAddress: '#21, Ground Floor, MCHS Colony, 5th C Cross, 16th Main, BTM Layout 2nd Stage / Kanjurmarg, Mumbai',
-    latitude: 19.136,
-    longitude: 72.928,
-    phone: '080-41689889',
-    website: 'https://saahas.org',
-    facilityType: 'Community Material Recovery & Drop-off Hub',
-    timings: 'Monday - Saturday: 9:30 AM – 6:30 PM (Closed Sundays)',
-    guidelines: 'Clean, dry and segregated recyclables accepted. Separate hazardous electronic scrap from dry streams.',
-    streams: ['plastic', 'metal', 'glass', 'e-waste devices', 'cardboard and paper', 'fabric', 'furniture', 'organic', 'rubber', 'other'],
-  },
-];
+import { DEFAULT_RECOVERY_HUBS, fetchRecoveryHubs } from '../services/hubService';
 
 export default function NgoSearchScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [selectedDetailHub, setSelectedDetailHub] = useState(null);
-  const [hubs, setHubs] = useState(DEFAULT_HUBS);
-  const [loading, setLoading] = useState(true);
+  const [hubs, setHubs] = useState(DEFAULT_RECOVERY_HUBS);
+  const [loading, setLoading] = useState(false);
 
   // Fetch markers data from Supabase table on mount
   useEffect(() => {
@@ -65,42 +32,12 @@ export default function NgoSearchScreen({ navigation, route }) {
   const fetchHubsFromSupabase = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from('markers').select('*');
-
-      if (error) {
-        throw error;
-      }
-
+      const data = await fetchRecoveryHubs();
       if (data && data.length > 0) {
-        const formattedHubs = data.map((item, index) => {
-          let websiteUrl = item.website || '';
-          if (websiteUrl) {
-            websiteUrl = websiteUrl.replace(/,/g, '/').replace(/\/+/g, '/').replace('https:/', 'https://');
-          }
-          return {
-            id: item.id ? item.id.toString() : index.toString(),
-            name: item.name ? (item.name.charAt(0).toUpperCase() + item.name.slice(1)) : 'Recovery Hub',
-            type: item.type ? item.type.trim() : 'NGO',
-            address: item.address || '',
-            fullAddress: item.address || '',
-            phone: item.phone ? item.phone.toString().trim() : '',
-            website: websiteUrl,
-            latitude: item.latitude ? parseFloat(item.latitude) : 19.148,
-            longitude: item.longitude ? parseFloat(item.longitude) : 72.936,
-            timings: item.opening_hours && item.closing_hours
-              ? `Daily: ${item.opening_hours} – ${item.closing_hours}`
-              : 'Mon – Sat: 9:30 AM – 6:00 PM',
-            facilityType: 'Community Material Recovery & Drop-off Hub',
-            guidelines: 'Clean, dry and segregated recyclables accepted.',
-            streams: typeof item.type_of_trash === 'string'
-              ? item.type_of_trash.split(',').map(s => s.trim())
-              : ['general recyclable scrap'],
-          };
-        });
-        setHubs(formattedHubs);
+        setHubs(data);
       }
     } catch (error) {
-      console.warn('Error fetching recovery hubs from Supabase:', error.message);
+      console.warn('Error fetching recovery hubs in NgoScreen:', error.message);
     } finally {
       setLoading(false);
     }
@@ -111,7 +48,7 @@ export default function NgoSearchScreen({ navigation, route }) {
     const focusId = route?.params?.focusHubId;
     if (focusId) {
       const cleanId = focusId.replace('ngo-', '');
-      const found = hubs.find((h) => h.id === cleanId || h.id === focusId);
+      const found = hubs.find((h) => h.id === cleanId || h.id === focusId || h.rawId === cleanId || h.id === `ngo-${cleanId}`);
       if (found) {
         setSelectedDetailHub(found);
       }
@@ -126,9 +63,9 @@ export default function NgoSearchScreen({ navigation, route }) {
   const filteredHubs = hubs.filter((hub) => {
     if (!submittedQuery) return true;
     const q = submittedQuery.toLowerCase();
-    const matchesName = hub.name.toLowerCase().includes(q);
-    const matchesAddress = hub.address.toLowerCase().includes(q);
-    const matchesStream = hub.streams.some((stream) => stream.toLowerCase().includes(q));
+    const matchesName = (hub.title || hub.name || '').toLowerCase().includes(q);
+    const matchesAddress = (hub.address || '').toLowerCase().includes(q);
+    const matchesStream = Array.isArray(hub.streams) && hub.streams.some((stream) => stream.toLowerCase().includes(q));
     return matchesName || matchesAddress || matchesStream;
   });
 
@@ -258,8 +195,8 @@ export default function NgoSearchScreen({ navigation, route }) {
                             screen: 'MapTab',
                             params: {
                               focusLocation: {
-                                id: `ngo-${hub.id}`,
-                                title: hub.name,
+                                id: hub.id.startsWith('ngo-') ? hub.id : `ngo-${hub.id}`,
+                                title: hub.title || hub.name,
                                 address: hub.address,
                                 latitude: hub.latitude,
                                 longitude: hub.longitude,
@@ -395,8 +332,8 @@ export default function NgoSearchScreen({ navigation, route }) {
                       screen: 'MapTab',
                       params: {
                         focusLocation: {
-                          id: `ngo-${hub.id}`,
-                          title: hub.name,
+                          id: hub.id.startsWith('ngo-') ? hub.id : `ngo-${hub.id}`,
+                          title: hub.title || hub.name,
                           address: hub.address,
                           latitude: hub.latitude,
                           longitude: hub.longitude,

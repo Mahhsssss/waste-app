@@ -10,73 +10,56 @@ import {
   Platform,
   Alert,
   Modal,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import globalStyles, { colors, spacing, radius } from '../globalStyles';
 import { getReports, subscribeReports } from '../services/reportService';
+import { DEFAULT_RECOVERY_HUBS, fetchRecoveryHubs } from '../services/hubService';
 
 export default function MapScreen({ navigation, route }) {
   const [reports, setReports] = useState([]);
-  const [selectedFilter, setSelectedFilter] = useState('My Reports'); // 'My Reports' | 'NGOs' | 'Trash Dumps' | 'All'
+  const [selectedFilter, setSelectedFilter] = useState('NGOs'); // 'NGOs' | 'My Reports' | 'Trash Dumps' | 'All'
   const [selectedMarker, setSelectedMarker] = useState(null);
   const [detailsModalItem, setDetailsModalItem] = useState(null);
-  const [zoomLevel, setZoomLevel] = useState(15);
-  const [mapMode, setMapMode] = useState('m'); // 'm' = Street, 'k' = Satellite
+  const [zoomLevel, setZoomLevel] = useState(13);
+  const [mapMode, setMapMode] = useState('pins'); // 'pins' = Multi-Pin Overview, 'm' = Street, 'k' = Satellite
   const [isLocating, setIsLocating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Recovery hubs (NGOs) strictly matching NgoScreen.js data with full details
-  const ngoCenters = [
-    {
-      id: 'ngo-1',
-      title: 'greenciti',
-      shortName: 'greenciti',
-      type: 'NGO',
-      isNgo: true,
-      address: '19, Dreams Mall, Near Bhandup Railway Station, L.B.S. Marg, Bhandup West, Mumbai',
-      fullAddress: '19, Dreams Mall, Near Bhandup Railway Station, L.B.S. Marg, Bhandup West, Mumbai, Maharashtra 400078',
-      latitude: 19.148,
-      longitude: 72.936,
-      status: 'Recovery Hub',
-      statusColor: '#166534',
-      icon: 'business',
-      color: '#166534',
-      facilityType: 'Community Material Recovery & Drop-off Hub',
-      timings: 'Monday - Saturday: 9:30 AM – 6:00 PM (Closed Sundays)',
-      guidelines: 'Rinse and dry plastic/metal scrap. Keep e-waste devices segregated from cardboard and paper.',
-      streams: ['plastic', 'metal', 'e-waste devices', 'cardboard and paper', 'fabric', 'organic'],
-    },
-    {
-      id: 'ngo-2',
-      title: 'saahas',
-      shortName: 'saahas',
-      type: 'NGO',
-      isNgo: true,
-      address: '#21, Ground Floor, MCHS Colony, 5th C Cross, 16th Main, BTM Layout 2nd Stage / Kanjurmarg',
-      fullAddress: '#21, Ground Floor, MCHS Colony, 5th C Cross, 16th Main, BTM Layout 2nd Stage / Kanjurmarg, Mumbai',
-      latitude: 19.136,
-      longitude: 72.928,
-      status: 'Recovery Hub',
-      statusColor: '#166534',
-      icon: 'business',
-      color: '#166534',
-      facilityType: 'Community Material Recovery & Drop-off Hub',
-      timings: 'Monday - Saturday: 9:30 AM – 6:30 PM (Closed Sundays)',
-      guidelines: 'Clean, dry and segregated recyclables accepted. Separate hazardous electronic scrap from dry streams.',
-      streams: ['plastic', 'metal', 'glass', 'e-waste devices', 'cardboard and paper', 'fabric', 'furniture', 'organic', 'rubber', 'other'],
-    },
-  ];
+  // All 15 verified Recovery Hubs from Supabase markers table
+  const [ngoCenters, setNgoCenters] = useState(DEFAULT_RECOVERY_HUBS);
 
-  // Central coordinates (Default to first reported dump or Greenciti)
+  // Central coordinates (Default to Greenciti Bhandup West hub)
   const [activeLocation, setActiveLocation] = useState({
-    latitude: 19.145,
-    longitude: 72.932,
-    title: 'Reported Dumps & Recovery Hubs',
+    latitude: 19.1458,
+    longitude: 72.937,
+    title: 'Greenciti Recovery Hub',
   });
 
   // Navigation params: focus on specific dump or NGO
   const focusDumpId = route?.params?.focusDumpId;
   const focusLocation = route?.params?.focusLocation;
+
+  // Live fetch hubs from Supabase on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadHubs() {
+      try {
+        const hubs = await fetchRecoveryHubs();
+        if (isMounted && hubs && hubs.length > 0) {
+          setNgoCenters(hubs);
+        }
+      } catch (e) {
+        console.warn('Error loading recovery hubs in MapScreen:', e);
+      }
+    }
+    loadHubs();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (route?.params?.filter) {
@@ -119,38 +102,76 @@ export default function MapScreen({ navigation, route }) {
       }
     } else if (focusLocation) {
       setSelectedFilter('NGOs');
-      const foundNgo = ngoCenters.find((n) => n.id === focusLocation.id) || focusLocation;
+      const foundNgo = ngoCenters.find(
+        (n) =>
+          n.id === focusLocation.id ||
+          n.rawId === focusLocation.id ||
+          n.id === `ngo-${focusLocation.id}` ||
+          (focusLocation.title && n.title?.toLowerCase() === focusLocation.title.toLowerCase())
+      ) || focusLocation;
       setSelectedMarker(foundNgo);
       setActiveLocation({
-        latitude: focusLocation.latitude,
-        longitude: focusLocation.longitude,
-        title: focusLocation.title || focusLocation.name,
+        latitude: focusLocation.latitude || foundNgo.latitude,
+        longitude: focusLocation.longitude || foundNgo.longitude,
+        title: focusLocation.title || foundNgo.title || 'Recovery Hub',
       });
     } else if (!selectedMarker) {
-      if (myReports.length > 0) {
-        setSelectedMarker(myReports[0]);
-        setActiveLocation({
-          latitude: myReports[0].latitude,
-          longitude: myReports[0].longitude,
-          title: myReports[0].title,
-        });
-      } else if (ngoCenters.length > 0) {
+      if (ngoCenters.length > 0) {
         setSelectedMarker(ngoCenters[0]);
         setActiveLocation({
           latitude: ngoCenters[0].latitude,
           longitude: ngoCenters[0].longitude,
           title: ngoCenters[0].title,
         });
+      } else if (myReports.length > 0) {
+        setSelectedMarker(myReports[0]);
+        setActiveLocation({
+          latitude: myReports[0].latitude,
+          longitude: myReports[0].longitude,
+          title: myReports[0].title,
+        });
       }
     }
-  }, [focusDumpId, focusLocation, reports]);
+  }, [focusDumpId, focusLocation, reports, ngoCenters]);
+
+  // PostMessage listener for Web Leaflet multi-pin clicks
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const handleMessage = (event) => {
+        if (event?.data?.type === 'SELECT_MARKER' && event.data.markerId) {
+          const found = allMarkers.find((m) => m.id === event.data.markerId);
+          if (found) {
+            handleSelectMarker(found);
+          }
+        }
+      };
+      window.addEventListener('message', handleMessage);
+      return () => window.removeEventListener('message', handleMessage);
+    }
+  }, [allMarkers]);
 
   const filteredMarkers = allMarkers.filter((m) => {
-    if (selectedFilter === 'My Reports') return m.isMyReport;
-    if (selectedFilter === 'NGOs') return m.isNgo;
-    if (selectedFilter === 'Trash Dumps') return m.isDump;
-    return true; // 'All'
+    // Primary tab filtering
+    let matchesCategory = true;
+    if (selectedFilter === 'My Reports') matchesCategory = m.isMyReport;
+    else if (selectedFilter === 'NGOs') matchesCategory = m.isNgo;
+    else if (selectedFilter === 'Trash Dumps') matchesCategory = m.isDump;
+
+    if (!matchesCategory) return false;
+
+    // Search query filtering
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const titleMatch = (m.title || m.name || '').toLowerCase().includes(q);
+      const addressMatch = (m.address || m.fullAddress || '').toLowerCase().includes(q);
+      const streamsMatch = Array.isArray(m.streams) && m.streams.some((s) => s.toLowerCase().includes(q));
+      const typeMatch = (m.wasteType || m.facilityType || '').toLowerCase().includes(q);
+      return titleMatch || addressMatch || streamsMatch || typeMatch;
+    }
+
+    return true;
   });
+
 
   // Real Hardware GPS Location Detector
   const handleLocateMe = () => {
@@ -207,6 +228,172 @@ export default function MapScreen({ navigation, route }) {
 
   const googleMapsEmbedUrl = `https://maps.google.com/maps?q=${activeLocation.latitude},${activeLocation.longitude}&z=${zoomLevel}&t=${mapMode}&output=embed`;
 
+  const generateLeafletHtml = () => {
+    const markersJson = JSON.stringify(
+      filteredMarkers.map((m) => ({
+        id: m.id,
+        title: m.title || m.name || 'Location',
+        address: m.address || '',
+        lat: m.latitude,
+        lng: m.longitude,
+        isNgo: !!m.isNgo,
+        isMyReport: !!m.isMyReport,
+        streams: m.streams || [],
+      }))
+    );
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    html, body, #map { width: 100%; height: 100%; margin: 0; padding: 0; background: #e5e7eb; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .hub-pin {
+      background: #166534;
+      color: white;
+      border: 2px solid white;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+    }
+    .dump-pin {
+      background: #DC2626;
+      color: white;
+      border: 2px solid white;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+    }
+    .user-pin {
+      background: #D97706;
+      color: white;
+      border: 2px solid white;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+    }
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px;
+      padding: 4px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+    }
+    .popup-content { padding: 4px; max-width: 220px; }
+    .popup-title { font-weight: 700; font-size: 13px; color: #111827; margin-bottom: 3px; }
+    .popup-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 999px;
+      margin-bottom: 5px;
+    }
+    .badge-ngo { background: #DCFCE7; color: #166534; }
+    .badge-dump { background: #FEE2E2; color: #DC2626; }
+    .badge-user { background: #FEF3C7; color: #B45309; }
+    .popup-addr { font-size: 11px; color: #4B5563; line-height: 1.3; margin-bottom: 6px; }
+    .popup-streams { font-size: 10px; color: #065F46; font-weight: 600; margin-bottom: 6px; }
+    .popup-btn {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      background: #166534;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const markers = ${markersJson};
+    const centerLat = ${activeLocation.latitude};
+    const centerLng = ${activeLocation.longitude};
+    const zoom = ${zoomLevel};
+
+    const map = L.map('map', { zoomControl: false }).setView([centerLat, centerLng], zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    const latLngs = [];
+
+    markers.forEach(m => {
+      if (!m.lat || !m.lng) return;
+      latLngs.push([m.lat, m.lng]);
+
+      const pinClass = m.isNgo ? 'hub-pin' : m.isMyReport ? 'user-pin' : 'dump-pin';
+      const pinIcon = m.isNgo ? '🏢' : m.isMyReport ? '🌟' : '🚨';
+
+      const customIcon = L.divIcon({
+        className: 'custom-marker-icon',
+        html: '<div class="' + pinClass + '">' + pinIcon + '</div>',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -15]
+      });
+
+      const badgeClass = m.isNgo ? 'badge-ngo' : m.isMyReport ? 'badge-user' : 'badge-dump';
+      const badgeText = m.isNgo ? 'RECOVERY HUB' : m.isMyReport ? 'YOUR REPORT' : 'DUMP REPORT';
+
+      const streamsHtml = (m.streams && m.streams.length > 0)
+        ? '<div class="popup-streams">Accepts: ' + m.streams.slice(0, 3).join(', ') + (m.streams.length > 3 ? ' +' + (m.streams.length - 3) + ' more' : '') + '</div>'
+        : '';
+
+      const popupHtml = '<div class="popup-content">' +
+        '<div class="popup-title">' + m.title + '</div>' +
+        '<div class="popup-badge ' + badgeClass + '">' + badgeText + '</div>' +
+        '<div class="popup-addr">' + (m.address || '') + '</div>' +
+        streamsHtml +
+        '<button class="popup-btn" onclick="selectMarker(\\'' + m.id + '\\')">Select & View Details</button>' +
+        '</div>';
+
+      const marker = L.marker([m.lat, m.lng], { icon: customIcon }).addTo(map);
+      marker.bindPopup(popupHtml);
+
+      marker.on('click', () => {
+        selectMarker(m.id);
+      });
+    });
+
+    function selectMarker(id) {
+      if (window.parent) {
+        window.parent.postMessage({ type: 'SELECT_MARKER', markerId: id }, '*');
+      }
+    }
+
+    if (latLngs.length > 1 && ${selectedFilter === 'All' ? 'true' : 'false'}) {
+      map.fitBounds(latLngs, { padding: [30, 30] });
+    }
+  </script>
+</body>
+</html>`;
+  };
+
   return (
     <SafeAreaView style={[globalStyles.safeArea, styles.safeAreaOverride]} edges={['top', 'left', 'right']}>
       <View style={styles.webWrapper}>
@@ -241,27 +428,27 @@ export default function MapScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
 
+          {/* Search Bar for 15+ Hubs & Dumps */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search-outline" size={17} color={colors.primary600} style={styles.searchIcon} />
+            <TextInput
+              placeholder="Search 15+ hubs, dumps, streams (plastic, Goregaon)..."
+              placeholderTextColor={colors.placeholder}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              style={styles.searchInput}
+              returnKeyType="search"
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.searchClearBtn}>
+                <Ionicons name="close-circle" size={18} color={colors.primary600} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
           {/* Primary Quick-Filter Tabs */}
           <View style={styles.primaryTabBar}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.primaryTabScroll}>
-              <TouchableOpacity
-                style={[styles.primaryTab, selectedFilter === 'My Reports' && styles.primaryTabActiveUser]}
-                onPress={() => {
-                  setSelectedFilter('My Reports');
-                  if (myReports.length > 0) handleSelectMarker(myReports[0]);
-                }}
-              >
-                <Ionicons
-                  name="person"
-                  size={14}
-                  color={selectedFilter === 'My Reports' ? colors.white : colors.primary800}
-                  style={{ marginRight: 5 }}
-                />
-                <Text style={[styles.primaryTabText, selectedFilter === 'My Reports' && styles.primaryTabTextActive]}>
-                  🌟 Reported by Me ({myReports.length})
-                </Text>
-              </TouchableOpacity>
-
               <TouchableOpacity
                 style={[styles.primaryTab, selectedFilter === 'NGOs' && styles.primaryTabActiveNgo]}
                 onPress={() => {
@@ -277,6 +464,24 @@ export default function MapScreen({ navigation, route }) {
                 />
                 <Text style={[styles.primaryTabText, selectedFilter === 'NGOs' && styles.primaryTabTextActive]}>
                   🏢 NGOs ({ngoCenters.length})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.primaryTab, selectedFilter === 'My Reports' && styles.primaryTabActiveUser]}
+                onPress={() => {
+                  setSelectedFilter('My Reports');
+                  if (myReports.length > 0) handleSelectMarker(myReports[0]);
+                }}
+              >
+                <Ionicons
+                  name="person"
+                  size={14}
+                  color={selectedFilter === 'My Reports' ? colors.white : colors.primary800}
+                  style={{ marginRight: 5 }}
+                />
+                <Text style={[styles.primaryTabText, selectedFilter === 'My Reports' && styles.primaryTabTextActive]}>
+                  🌟 Reported by Me ({myReports.length})
                 </Text>
               </TouchableOpacity>
 
@@ -315,10 +520,25 @@ export default function MapScreen({ navigation, route }) {
             </ScrollView>
           </View>
 
-          {/* Map Toolbar: Street/Satellite, GPS, and Zoom */}
+          {/* Map Toolbar: All Pins / Street / Satellite, GPS, and Zoom */}
           <View style={styles.toolbar}>
             {/* View Mode Toggle */}
             <View style={styles.modeToggleGroup}>
+              <TouchableOpacity
+                style={[styles.modeBtn, mapMode === 'pins' && styles.modeBtnActive]}
+                onPress={() => setMapMode('pins')}
+              >
+                <Ionicons
+                  name="pin"
+                  size={13}
+                  color={mapMode === 'pins' ? colors.white : colors.primary800}
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={[styles.modeBtnText, mapMode === 'pins' && styles.modeBtnTextActive]}>
+                  All Pins
+                </Text>
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={[styles.modeBtn, mapMode === 'm' && styles.modeBtnActive]}
                 onPress={() => setMapMode('m')}
@@ -385,20 +605,33 @@ export default function MapScreen({ navigation, route }) {
             </View>
           </View>
 
-          {/* Real Google Maps Embed Container */}
+          {/* Interactive Multi-Pin Map / Google Maps Embed Container */}
           <View style={styles.mapContainer}>
             {Platform.OS === 'web' ? (
-              <iframe
-                title="Google Maps Waste & Hub Locator"
-                src={googleMapsEmbedUrl}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  border: 'none',
-                }}
-                loading="lazy"
-                allowFullScreen
-              />
+              mapMode === 'pins' ? (
+                <iframe
+                  title="Interactive Multi-Pin Community Waste & Hub Map"
+                  srcDoc={generateLeafletHtml()}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                  }}
+                  loading="lazy"
+                />
+              ) : (
+                <iframe
+                  title="Google Maps Waste & Hub Locator"
+                  src={googleMapsEmbedUrl}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                  }}
+                  loading="lazy"
+                  allowFullScreen
+                />
+              )
             ) : (
               <View style={styles.nativeMapPlaceholder}>
                 <Ionicons name="map" size={48} color={colors.primary800} />
@@ -973,6 +1206,31 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   addReportBtnText: { color: colors.white, fontSize: 12, fontWeight: '800' },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.cardBg || '#f4f8f4',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    marginHorizontal: spacing.base,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+    height: 38,
+  },
+  searchIcon: {
+    marginRight: 6,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 12.5,
+    color: colors.textPrimary,
+    paddingVertical: 4,
+  },
+  searchClearBtn: {
+    padding: 4,
+  },
   primaryTabBar: { marginVertical: spacing.xs },
   primaryTabScroll: { paddingHorizontal: spacing.base, gap: 8 },
   primaryTab: {
