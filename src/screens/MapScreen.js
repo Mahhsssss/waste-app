@@ -18,6 +18,15 @@ import globalStyles, { colors, spacing, radius } from '../globalStyles';
 import { getReports, subscribeReports } from '../services/reportService';
 import { DEFAULT_RECOVERY_HUBS, fetchRecoveryHubs } from '../services/hubService';
 
+let NativeWebView = null;
+if (Platform.OS !== 'web') {
+  try {
+    NativeWebView = require('react-native-webview').WebView;
+  } catch (e) {
+    NativeWebView = null;
+  }
+}
+
 export default function MapScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const [reports, setReports] = useState([]);
@@ -382,7 +391,9 @@ export default function MapScreen({ navigation, route }) {
     });
 
     function selectMarker(id) {
-      if (window.parent) {
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SELECT_MARKER', markerId: id }));
+      } else if (window.parent) {
         window.parent.postMessage({ type: 'SELECT_MARKER', markerId: id }, '*');
       }
     }
@@ -429,240 +440,276 @@ export default function MapScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
 
-          {/* Search Bar for 15+ Hubs & Dumps */}
-          <View style={styles.searchContainer}>
-            <Ionicons name="search-outline" size={17} color={colors.primary600} style={styles.searchIcon} />
-            <TextInput
-              placeholder="Search 15+ hubs, dumps, streams (plastic, Goregaon)..."
-              placeholderTextColor={colors.placeholder}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              style={styles.searchInput}
-              returnKeyType="search"
-            />
-            {searchQuery ? (
-              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.searchClearBtn}>
-                <Ionicons name="close-circle" size={18} color={colors.primary600} />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {/* Primary Quick-Filter Tabs */}
-          <View style={styles.primaryTabBar}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.primaryTabScroll}>
-              <TouchableOpacity
-                style={[styles.primaryTab, selectedFilter === 'NGOs' && styles.primaryTabActiveNgo]}
-                onPress={() => {
-                  setSelectedFilter('NGOs');
-                  if (ngoCenters.length > 0) handleSelectMarker(ngoCenters[0]);
-                }}
-              >
-                <Ionicons
-                  name="business"
-                  size={14}
-                  color={selectedFilter === 'NGOs' ? colors.white : '#166534'}
-                  style={{ marginRight: 5 }}
-                />
-                <Text style={[styles.primaryTabText, selectedFilter === 'NGOs' && styles.primaryTabTextActive]}>
-                  🏢 NGOs ({ngoCenters.length})
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.primaryTab, selectedFilter === 'My Reports' && styles.primaryTabActiveUser]}
-                onPress={() => {
-                  setSelectedFilter('My Reports');
-                  if (myReports.length > 0) handleSelectMarker(myReports[0]);
-                }}
-              >
-                <Ionicons
-                  name="person"
-                  size={14}
-                  color={selectedFilter === 'My Reports' ? colors.white : colors.primary800}
-                  style={{ marginRight: 5 }}
-                />
-                <Text style={[styles.primaryTabText, selectedFilter === 'My Reports' && styles.primaryTabTextActive]}>
-                  🌟 Reported by Me ({myReports.length})
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.primaryTab, selectedFilter === 'Trash Dumps' && styles.primaryTabActiveDump]}
-                onPress={() => {
-                  setSelectedFilter('Trash Dumps');
-                  if (dumpMarkers.length > 0) handleSelectMarker(dumpMarkers[0]);
-                }}
-              >
-                <Ionicons
-                  name="warning"
-                  size={14}
-                  color={selectedFilter === 'Trash Dumps' ? colors.white : '#DC2626'}
-                  style={{ marginRight: 5 }}
-                />
-                <Text style={[styles.primaryTabText, selectedFilter === 'Trash Dumps' && styles.primaryTabTextActive]}>
-                  🚨 All Dumps ({dumpMarkers.length})
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.primaryTab, selectedFilter === 'All' && styles.primaryTabActiveAll]}
-                onPress={() => setSelectedFilter('All')}
-              >
-                <Ionicons
-                  name="globe-outline"
-                  size={14}
-                  color={selectedFilter === 'All' ? colors.white : colors.primary800}
-                  style={{ marginRight: 5 }}
-                />
-                <Text style={[styles.primaryTabText, selectedFilter === 'All' && styles.primaryTabTextActive]}>
-                  All Locations ({allMarkers.length})
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-
-          {/* Map Toolbar: All Pins / Street / Satellite, GPS, and Zoom */}
-          <View style={styles.toolbar}>
-            {/* View Mode Toggle */}
-            <View style={styles.modeToggleGroup}>
-              <TouchableOpacity
-                style={[styles.modeBtn, mapMode === 'pins' && styles.modeBtnActive]}
-                onPress={() => setMapMode('pins')}
-              >
-                <Ionicons
-                  name="pin"
-                  size={13}
-                  color={mapMode === 'pins' ? colors.white : colors.primary800}
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={[styles.modeBtnText, mapMode === 'pins' && styles.modeBtnTextActive]}>
-                  All Pins
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modeBtn, mapMode === 'm' && styles.modeBtnActive]}
-                onPress={() => setMapMode('m')}
-              >
-                <Ionicons
-                  name="map-outline"
-                  size={13}
-                  color={mapMode === 'm' ? colors.white : colors.primary800}
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={[styles.modeBtnText, mapMode === 'm' && styles.modeBtnTextActive]}>
-                  Street
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modeBtn, mapMode === 'k' && styles.modeBtnActive]}
-                onPress={() => setMapMode('k')}
-              >
-                <Ionicons
-                  name="planet-outline"
-                  size={13}
-                  color={mapMode === 'k' ? colors.white : colors.primary800}
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={[styles.modeBtnText, mapMode === 'k' && styles.modeBtnTextActive]}>
-                  Satellite
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* GPS Locator */}
-            <TouchableOpacity
-              style={[styles.gpsBtn, isLocating && styles.gpsBtnLoading]}
-              onPress={handleLocateMe}
-              disabled={isLocating}
-            >
-              <Ionicons
-                name={isLocating ? 'sync-outline' : 'navigate'}
-                size={13}
-                color={colors.primary800}
-                style={{ marginRight: 5 }}
+          {/* Unified Page Scroll: Search, Tabs, Map, and Card Lists all scroll naturally together */}
+          <ScrollView
+            style={styles.rootScroll}
+            contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 85, 110) }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Search Bar for 15+ Hubs & Dumps */}
+            <View style={styles.searchContainer}>
+              <Ionicons name="search-outline" size={17} color={colors.primary600} style={styles.searchIcon} />
+              <TextInput
+                placeholder="Search 15+ hubs, dumps, streams (plastic, Goregaon)..."
+                placeholderTextColor={colors.placeholder}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                style={styles.searchInput}
+                returnKeyType="search"
               />
-              <Text style={styles.gpsBtnText}>
-                {isLocating ? 'Locating...' : 'Locate Me'}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Zoom Controls */}
-            <View style={styles.zoomGroup}>
-              <TouchableOpacity
-                style={styles.zoomBtn}
-                onPress={() => setZoomLevel((z) => Math.min(19, z + 1))}
-              >
-                <Ionicons name="add" size={15} color={colors.primary800} />
-              </TouchableOpacity>
-              <View style={styles.zoomDivider} />
-              <TouchableOpacity
-                style={styles.zoomBtn}
-                onPress={() => setZoomLevel((z) => Math.max(12, z - 1))}
-              >
-                <Ionicons name="remove" size={15} color={colors.primary800} />
-              </TouchableOpacity>
+              {searchQuery ? (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.searchClearBtn}>
+                  <Ionicons name="close-circle" size={18} color={colors.primary600} />
+                </TouchableOpacity>
+              ) : null}
             </View>
-          </View>
 
-          {/* Interactive Multi-Pin Map / Google Maps Embed Container */}
-          <View style={styles.mapContainer}>
-            {Platform.OS === 'web' ? (
-              mapMode === 'pins' ? (
-                <iframe
-                  title="Interactive Multi-Pin Community Waste & Hub Map"
-                  srcDoc={generateLeafletHtml()}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    border: 'none',
-                  }}
-                  loading="lazy"
-                />
-              ) : (
-                <iframe
-                  title="Google Maps Waste & Hub Locator"
-                  src={googleMapsEmbedUrl}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    border: 'none',
-                  }}
-                  loading="lazy"
-                  allowFullScreen
-                />
-              )
-            ) : (
-              <View style={styles.nativeMapPlaceholder}>
-                <Ionicons name="map" size={48} color={colors.primary800} />
-                <Text style={styles.nativeMapText}>{activeLocation.title}</Text>
-                <Text style={styles.nativeMapSub}>
-                  Lat: {activeLocation.latitude.toFixed(4)}, Lon: {activeLocation.longitude.toFixed(4)}
-                </Text>
+            {/* Primary Quick-Filter Tabs */}
+            <View style={styles.primaryTabBar}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.primaryTabScroll}>
                 <TouchableOpacity
-                  style={styles.openGoogleMapsBtn}
-                  onPress={() => handleDirections(activeLocation.latitude, activeLocation.longitude)}
+                  style={[styles.primaryTab, selectedFilter === 'NGOs' && styles.primaryTabActiveNgo]}
+                  onPress={() => {
+                    setSelectedFilter('NGOs');
+                    if (ngoCenters.length > 0) handleSelectMarker(ngoCenters[0]);
+                  }}
                 >
-                  <Ionicons name="open-outline" size={16} color={colors.white} style={{ marginRight: 6 }} />
-                  <Text style={styles.openGoogleMapsBtnText}>Open in Google Maps App</Text>
+                  <Ionicons
+                    name="business"
+                    size={14}
+                    color={selectedFilter === 'NGOs' ? colors.white : '#166534'}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={[styles.primaryTabText, selectedFilter === 'NGOs' && styles.primaryTabTextActive]}>
+                    🏢 NGOs ({ngoCenters.length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.primaryTab, selectedFilter === 'My Reports' && styles.primaryTabActiveUser]}
+                  onPress={() => {
+                    setSelectedFilter('My Reports');
+                    if (myReports.length > 0) handleSelectMarker(myReports[0]);
+                  }}
+                >
+                  <Ionicons
+                    name="person"
+                    size={14}
+                    color={selectedFilter === 'My Reports' ? colors.white : colors.primary800}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={[styles.primaryTabText, selectedFilter === 'My Reports' && styles.primaryTabTextActive]}>
+                    🌟 Reported by Me ({myReports.length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.primaryTab, selectedFilter === 'Trash Dumps' && styles.primaryTabActiveDump]}
+                  onPress={() => {
+                    setSelectedFilter('Trash Dumps');
+                    if (dumpMarkers.length > 0) handleSelectMarker(dumpMarkers[0]);
+                  }}
+                >
+                  <Ionicons
+                    name="warning"
+                    size={14}
+                    color={selectedFilter === 'Trash Dumps' ? colors.white : '#DC2626'}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={[styles.primaryTabText, selectedFilter === 'Trash Dumps' && styles.primaryTabTextActive]}>
+                    🚨 All Dumps ({dumpMarkers.length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.primaryTab, selectedFilter === 'All' && styles.primaryTabActiveAll]}
+                  onPress={() => setSelectedFilter('All')}
+                >
+                  <Ionicons
+                    name="globe-outline"
+                    size={14}
+                    color={selectedFilter === 'All' ? colors.white : colors.primary800}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={[styles.primaryTabText, selectedFilter === 'All' && styles.primaryTabTextActive]}>
+                    All Locations ({allMarkers.length})
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+
+            {/* Map Toolbar: All Pins / Street / Satellite, and GPS */}
+            <View style={styles.toolbar}>
+              {/* View Mode Toggle */}
+              <View style={styles.modeToggleGroup}>
+                <TouchableOpacity
+                  style={[styles.modeBtn, mapMode === 'pins' && styles.modeBtnActive]}
+                  onPress={() => setMapMode('pins')}
+                >
+                  <Ionicons
+                    name="pin"
+                    size={13}
+                    color={mapMode === 'pins' ? colors.white : colors.primary800}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={[styles.modeBtnText, mapMode === 'pins' && styles.modeBtnTextActive]}>
+                    All Pins
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modeBtn, mapMode === 'm' && styles.modeBtnActive]}
+                  onPress={() => setMapMode('m')}
+                >
+                  <Ionicons
+                    name="map-outline"
+                    size={13}
+                    color={mapMode === 'm' ? colors.white : colors.primary800}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={[styles.modeBtnText, mapMode === 'm' && styles.modeBtnTextActive]}>
+                    Street
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modeBtn, mapMode === 'k' && styles.modeBtnActive]}
+                  onPress={() => setMapMode('k')}
+                >
+                  <Ionicons
+                    name="planet-outline"
+                    size={13}
+                    color={mapMode === 'k' ? colors.white : colors.primary800}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={[styles.modeBtnText, mapMode === 'k' && styles.modeBtnTextActive]}>
+                    Satellite
+                  </Text>
                 </TouchableOpacity>
               </View>
-            )}
 
-            {/* Active Pin Overlay Tag */}
-            <View style={styles.activeLocationBadge}>
-              <Ionicons
-                name={selectedMarker?.isNgo ? 'business' : selectedMarker?.isMyReport ? 'person' : 'location'}
-                size={14}
-                color={selectedMarker?.isNgo ? '#166534' : selectedMarker?.isMyReport ? '#B45309' : '#DC2626'}
-                style={{ marginRight: 4 }}
-              />
-              <Text style={styles.activeLocationText} numberOfLines={1}>
-                {activeLocation.title} ({activeLocation.latitude.toFixed(3)}, {activeLocation.longitude.toFixed(3)})
-              </Text>
+              {/* GPS Locator */}
+              <TouchableOpacity
+                style={[styles.gpsBtn, isLocating && styles.gpsBtnLoading]}
+                onPress={handleLocateMe}
+                disabled={isLocating}
+              >
+                <Ionicons
+                  name={isLocating ? 'sync-outline' : 'navigate'}
+                  size={13}
+                  color={colors.primary800}
+                  style={{ marginRight: 5 }}
+                />
+                <Text style={styles.gpsBtnText}>
+                  {isLocating ? 'Locating...' : 'Locate Me'}
+                </Text>
+              </TouchableOpacity>
             </View>
-          </View>
+
+            {/* Interactive Multi-Pin Map / Google Maps Embed / Native WebView Container */}
+            <View style={styles.mapContainer}>
+              {Platform.OS === 'web' ? (
+                mapMode === 'pins' ? (
+                  <iframe
+                    title="Interactive Multi-Pin Community Waste & Hub Map"
+                    srcDoc={generateLeafletHtml()}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      border: 'none',
+                    }}
+                    loading="lazy"
+                  />
+                ) : (
+                  <iframe
+                    title="Google Maps Waste & Hub Locator"
+                    src={googleMapsEmbedUrl}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      border: 'none',
+                    }}
+                    loading="lazy"
+                    allowFullScreen
+                  />
+                )
+              ) : NativeWebView ? (
+                <NativeWebView
+                  source={
+                    mapMode === 'pins'
+                      ? { html: generateLeafletHtml() }
+                      : { uri: googleMapsEmbedUrl }
+                  }
+                  style={styles.webView}
+                  javaScriptEnabled={true}
+                  domStorageEnabled={true}
+                  originWhitelist={['*']}
+                  scrollEnabled={false}
+                  nestedScrollEnabled={false}
+                  onMessage={(event) => {
+                    try {
+                      const data = JSON.parse(event.nativeEvent.data);
+                      if (data.type === 'SELECT_MARKER' && data.markerId) {
+                        const found = allMarkers.find((m) => m.id === data.markerId);
+                        if (found) {
+                          handleSelectMarker(found);
+                        }
+                      }
+                    } catch (e) {
+                      // ignore parse error
+                    }
+                  }}
+                />
+              ) : (
+                <View style={styles.nativeMapPlaceholder}>
+                  <Ionicons name="map" size={48} color={colors.primary800} />
+                  <Text style={styles.nativeMapText}>{activeLocation.title}</Text>
+                  <Text style={styles.nativeMapSub}>
+                    Lat: {activeLocation.latitude.toFixed(4)}, Lon: {activeLocation.longitude.toFixed(4)}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.openGoogleMapsBtn}
+                    onPress={() => handleDirections(activeLocation.latitude, activeLocation.longitude)}
+                  >
+                    <Ionicons name="open-outline" size={16} color={colors.white} style={{ marginRight: 6 }} />
+                    <Text style={styles.openGoogleMapsBtnText}>Open in Google Maps App</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Active Pin Overlay Tag */}
+              <View style={styles.activeLocationBadge}>
+                <Ionicons
+                  name={selectedMarker?.isNgo ? 'business' : selectedMarker?.isMyReport ? 'person' : 'location'}
+                  size={14}
+                  color={selectedMarker?.isNgo ? '#166534' : selectedMarker?.isMyReport ? '#B45309' : '#DC2626'}
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={styles.activeLocationText} numberOfLines={1}>
+                  {activeLocation.title} ({activeLocation.latitude.toFixed(3)}, {activeLocation.longitude.toFixed(3)})
+                </Text>
+              </View>
+
+              {/* Floating In-Map Zoom Controls (Inside phone range) */}
+              <View style={styles.floatingZoomGroup}>
+                <TouchableOpacity
+                  style={styles.floatingZoomBtn}
+                  onPress={() => setZoomLevel((z) => Math.min(19, z + 1))}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Ionicons name="add" size={17} color={colors.primary800} />
+                </TouchableOpacity>
+                <View style={styles.floatingZoomDivider} />
+                <TouchableOpacity
+                  style={styles.floatingZoomBtn}
+                  onPress={() => setZoomLevel((z) => Math.max(12, z - 1))}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Ionicons name="remove" size={17} color={colors.primary800} />
+                </TouchableOpacity>
+              </View>
+            </View>
 
           {/* Filtered Location Quick-Pills Bar */}
           <View style={styles.filterBar}>
@@ -711,11 +758,7 @@ export default function MapScreen({ navigation, route }) {
           </View>
 
           {/* Bottom Area: Detail Cards & Lists */}
-          <ScrollView
-            style={styles.bottomArea}
-            contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 85, 110) }}
-            showsVerticalScrollIndicator={false}
-          >
+          <View style={styles.bottomArea}>
             {/* 1. SELECTED MARKER DETAIL CARD */}
             {selectedMarker ? (
               <View style={styles.detailCard}>
@@ -809,7 +852,7 @@ export default function MapScreen({ navigation, route }) {
                 <View style={styles.detailFooter}>
                   <View style={{ flex: 1, marginRight: 8 }}>
                     <Text style={styles.statusLabel}>Status:</Text>
-                    <Text style={[styles.statusVal, { color: selectedMarker.statusColor || '#166534' }]}>
+                    <Text style={[styles.statusVal, { color: selectedMarker.statusColor || '#166534' }]} numberOfLines={1}>
                       {selectedMarker.status}
                     </Text>
                   </View>
@@ -824,11 +867,11 @@ export default function MapScreen({ navigation, route }) {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={styles.ngoDirLinkBtn}
+                      style={styles.detailDetailsBtn}
                       onPress={() => setDetailsModalItem(selectedMarker)}
                     >
                       <Ionicons name="information-circle-outline" size={14} color={colors.primary800} style={{ marginRight: 4 }} />
-                      <Text style={styles.ngoDirLinkBtnText}>Show Details</Text>
+                      <Text style={styles.detailDetailsBtnText}>Details</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -896,24 +939,24 @@ export default function MapScreen({ navigation, route }) {
                           style={styles.myDumpMapBtn}
                           onPress={() => handleSelectMarker(dump)}
                         >
-                          <Ionicons name="locate" size={13} color={colors.primary800} style={{ marginRight: 4 }} />
-                          <Text style={styles.myDumpMapBtnText}>Center on Map</Text>
+                          <Ionicons name="locate" size={13} color={colors.primary800} style={{ marginRight: 3 }} />
+                          <Text style={styles.myDumpMapBtnText} numberOfLines={1}>Focus</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                          style={styles.ngoDirLinkBtn}
+                          style={styles.myDumpDetailsBtn}
                           onPress={() => setDetailsModalItem(dump)}
                         >
-                          <Ionicons name="document-text-outline" size={13} color={colors.primary800} style={{ marginRight: 4 }} />
-                          <Text style={styles.ngoDirLinkBtnText}>Show Details</Text>
+                          <Ionicons name="document-text-outline" size={13} color={colors.primary800} style={{ marginRight: 3 }} />
+                          <Text style={styles.myDumpDetailsBtnText} numberOfLines={1}>Details</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
                           style={styles.myDumpDirBtn}
                           onPress={() => handleDirections(dump.latitude, dump.longitude)}
                         >
-                          <Ionicons name="navigate" size={13} color={colors.white} style={{ marginRight: 4 }} />
-                          <Text style={styles.myDumpDirBtnText}>Directions</Text>
+                          <Ionicons name="navigate" size={13} color={colors.white} style={{ marginRight: 3 }} />
+                          <Text style={styles.myDumpDirBtnText} numberOfLines={1}>Directions</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -959,24 +1002,24 @@ export default function MapScreen({ navigation, route }) {
                         style={styles.myDumpMapBtn}
                         onPress={() => handleSelectMarker(ngo)}
                       >
-                        <Ionicons name="locate" size={13} color={colors.primary800} style={{ marginRight: 4 }} />
-                        <Text style={styles.myDumpMapBtnText}>Center on Map</Text>
+                        <Ionicons name="locate" size={13} color={colors.primary800} style={{ marginRight: 3 }} />
+                        <Text style={styles.myDumpMapBtnText} numberOfLines={1}>Focus</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
-                        style={styles.ngoDirLinkBtn}
+                        style={styles.myDumpDetailsBtn}
                         onPress={() => setDetailsModalItem(ngo)}
                       >
-                        <Ionicons name="information-circle-outline" size={14} color={colors.primary800} style={{ marginRight: 4 }} />
-                        <Text style={styles.ngoDirLinkBtnText}>Show Details</Text>
+                        <Ionicons name="information-circle-outline" size={14} color={colors.primary800} style={{ marginRight: 3 }} />
+                        <Text style={styles.myDumpDetailsBtnText} numberOfLines={1}>Details</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
                         style={styles.myDumpDirBtn}
                         onPress={() => handleDirections(ngo.latitude, ngo.longitude)}
                       >
-                        <Ionicons name="navigate" size={13} color={colors.white} style={{ marginRight: 4 }} />
-                        <Text style={styles.myDumpDirBtnText}>Directions</Text>
+                        <Ionicons name="navigate" size={13} color={colors.white} style={{ marginRight: 3 }} />
+                        <Text style={styles.myDumpDirBtnText} numberOfLines={1}>Directions</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -986,9 +1029,10 @@ export default function MapScreen({ navigation, route }) {
 
             {/* Extra bottom padding */}
             <View style={{ height: 40 }} />
-          </ScrollView>
-        </View>
+          </View>
+        </ScrollView>
       </View>
+    </View>
 
       {/* SHOW DETAILS MODAL SHEET */}
       {detailsModalItem && (
@@ -1184,6 +1228,7 @@ const styles = StyleSheet.create({
   safeAreaOverride: { flex: 1, backgroundColor: '#ffffff' },
   webWrapper: { flex: 1, alignItems: 'center', backgroundColor: Platform.OS === 'web' ? '#f3f6f3' : '#ffffff' },
   maxContainer: { flex: 1, width: '100%', maxWidth: 600, backgroundColor: '#ffffff' },
+  rootScroll: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1294,16 +1339,6 @@ const styles = StyleSheet.create({
   },
   gpsBtnLoading: { opacity: 0.6 },
   gpsBtnText: { fontSize: 11, fontWeight: '700', color: colors.primary800 },
-  zoomGroup: {
-    flexDirection: 'row',
-    backgroundColor: colors.cardBg || '#f4f8f4',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-  },
-  zoomBtn: { paddingHorizontal: 7, paddingVertical: 4 },
-  zoomDivider: { width: 1, height: 14, backgroundColor: colors.border },
   mapContainer: {
     marginHorizontal: spacing.base,
     height: 270,
@@ -1313,6 +1348,36 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: '#E8F4EC',
+  },
+  webView: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#E8F4EC',
+  },
+  floatingZoomGroup: {
+    position: 'absolute',
+    right: 10,
+    bottom: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    zIndex: 20,
+  },
+  floatingZoomBtn: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  floatingZoomDivider: {
+    height: 1,
+    backgroundColor: colors.border,
   },
   nativeMapPlaceholder: {
     flex: 1,
@@ -1366,7 +1431,7 @@ const styles = StyleSheet.create({
   locationPillActive: { backgroundColor: colors.primary800, borderColor: colors.primary800 },
   locationPillText: { fontSize: 11, fontWeight: '700', color: colors.textPrimary, maxWidth: 170 },
   locationPillTextActive: { color: colors.white },
-  bottomArea: { flex: 1, paddingHorizontal: spacing.base, marginTop: spacing.xs },
+  bottomArea: { paddingHorizontal: spacing.base, marginTop: spacing.xs },
   detailCard: {
     backgroundColor: colors.white,
     borderRadius: radius.xl,
@@ -1432,16 +1497,27 @@ const styles = StyleSheet.create({
   },
   statusLabel: { fontSize: 10, color: colors.textSecondary, fontWeight: '700' },
   statusVal: { fontSize: 12, fontWeight: '800' },
-  detailActionButtons: { flexDirection: 'row', gap: 6 },
+  detailActionButtons: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   directionsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary800,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: radius.full,
   },
   directionsBtnText: { color: colors.white, fontSize: 11, fontWeight: '800' },
+  detailDetailsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.cardBg || '#f4f8f4',
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+  },
+  detailDetailsBtnText: { color: colors.primary800, fontSize: 11, fontWeight: '700' },
   ngoDirLinkBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1449,7 +1525,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: radius.full,
   },
   ngoDirLinkBtnText: { color: colors.primary800, fontSize: 11, fontWeight: '700' },
@@ -1476,24 +1552,46 @@ const styles = StyleSheet.create({
   myDumpAddress: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
   myDumpThumb: { width: 55, height: 55, borderRadius: radius.md },
   myDumpNotes: { fontSize: 11.5, color: '#475569', fontStyle: 'italic', marginTop: 6 },
-  myDumpActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border },
-  myDumpMapBtn: {
+  myDumpActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  myDumpMapBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.cardBg || '#f4f8f4',
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: radius.full,
   },
   myDumpMapBtnText: { fontSize: 11, fontWeight: '700', color: colors.primary800 },
-  myDumpDirBtn: {
+  myDumpDetailsBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cardBg || '#f4f8f4',
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+  },
+  myDumpDetailsBtnText: { fontSize: 11, fontWeight: '700', color: colors.primary800 },
+  myDumpDirBtn: {
+    flex: 1.15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.primary800,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: radius.full,
   },
   myDumpDirBtnText: { fontSize: 11, fontWeight: '700', color: colors.white },
@@ -1543,8 +1641,8 @@ const styles = StyleSheet.create({
   streamPillText: { fontSize: 10, color: colors.primary800, fontWeight: '600' },
   ngoCardActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
+    alignItems: 'center',
+    gap: 6,
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,

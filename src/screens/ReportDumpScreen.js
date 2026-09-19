@@ -490,9 +490,9 @@ export default function ReportDumpScreen({ navigation, route }) {
             {/* Action Buttons */}
             <View style={styles.btnRow}>
               {/* WhatsApp Grievance Bot Direct Dispatch */}
-              <TouchableOpacity style={styles.whatsappBtn} onPress={handleWhatsAppReport}>
+              <TouchableOpacity style={styles.whatsappBtn} onPress={handleWhatsAppReport} activeOpacity={0.85}>
                 <Ionicons name="logo-whatsapp" size={20} color={colors.white} style={{ marginRight: 8 }} />
-                <Text style={styles.whatsappBtnText}>Send to BMC WhatsApp Bot (+91 8169681697)</Text>
+                <Text style={styles.whatsappBtnText} numberOfLines={1}>Send to BMC WhatsApp Bot</Text>
               </TouchableOpacity>
 
               {/* Official Email Button */}
@@ -682,12 +682,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#25D366',
     borderRadius: radius.full,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 3,
   },
-  whatsappBtnText: { color: colors.white, fontSize: 14, fontWeight: '800' },
+  whatsappBtnText: { color: colors.white, fontSize: 14, fontWeight: '800', textAlign: 'center' },
   emailBtn: {
     backgroundColor: colors.primary800,
     borderRadius: radius.full,
